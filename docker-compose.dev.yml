@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # MongoDB Database (Development)
+  secureshare-db-dev:
+    image: mongo:6.0
+    container_name: secureshare-mongodb-dev
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: secureshare_dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_dev_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - secureshare-dev-network
+
+  # Backend API Server (Development with hot reload)
+  secureshare-server-dev:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    container_name: secureshare-api-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 8000
+      MONGO_URL: mongodb://secureshare-db-dev:27017/secureshare_dev
+      JWT_SECRET: dev-jwt-secret-key-not-for-production
+      JWT_REFRESH_SECRET: dev-refresh-secret-key-not-for-production
+      FRONTEND_URL: http://localhost:3000
+      LOG_LEVEL: debug
+    ports:
+      - "8000:8000"
+      - "9229:9229" # Node.js debugger port
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+      - server_dev_uploads:/app/uploads
+      - server_dev_logs:/app/logs
+    networks:
+      - secureshare-dev-network
+    depends_on:
+      - secureshare-db-dev
+    command: npm run dev
+
+  # Frontend React App (Development with hot reload)
+  secureshare-client-dev:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    container_name: secureshare-frontend-dev
+    restart: unless-stopped
+    environment:
+      REACT_APP_API_URL: http://localhost:8000/api
+      CHOKIDAR_USEPOLLING: true
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    networks:
+      - secureshare-dev-network
+    depends_on:
+      - secureshare-server-dev
+    stdin_open: true
+    tty: true
+
+volumes:
+  mongodb_dev_data:
+    driver: local
+  server_dev_uploads:
+    driver: local
+  server_dev_logs:
+    driver: local
+
+networks:
+  secureshare-dev-network:
+    driver: bridge 

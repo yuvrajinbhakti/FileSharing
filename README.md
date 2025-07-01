@@ -65,16 +65,122 @@ SecureShare is a secure, enterprise-grade file sharing platform built with the M
 - **CORS** - Cross-origin protection
 - **Input Validation** - Server-side validation
 
+### Infrastructure
+- **Docker** - Containerization
+- **Docker Compose** - Multi-container orchestration
+- **Nginx** - Reverse proxy and static file serving
+- **Redis** - Session storage (optional)
+- **MongoDB** - Database with automatic backups
+
 ## 📦 Installation
 
 ### Prerequisites
-- Node.js 16+ 
-- MongoDB 4.4+
-- npm or yarn
+- Docker 20.10+
+- Docker Compose 2.0+
+- (Optional) Node.js 16+ for local development
+
+## 🐳 Docker Deployment (Recommended)
+
+### Quick Start with Docker
+
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd FileSharing
+```
+
+2. **Configure environment**
+```bash
+cp docker.env.template .env
+# Edit .env with your configuration
+```
+
+3. **Start the application**
+```bash
+# Development mode (with hot reloading)
+./scripts/docker-dev.sh start
+
+# Production mode
+./scripts/docker-prod.sh start
+```
+
+### Development Environment
+
+**Start development environment:**
+```bash
+# Make scripts executable (macOS/Linux)
+chmod +x scripts/*.sh
+
+# Build and start development containers
+./scripts/docker-dev.sh build
+./scripts/docker-dev.sh start
+```
+
+**Services will be available at:**
+- 🌐 Frontend: http://localhost:3000
+- 🚀 Backend API: http://localhost:8000
+- 🗄️ MongoDB: mongodb://localhost:27017/secureshare_dev
+
+**Development commands:**
+```bash
+# View logs
+./scripts/docker-dev.sh logs
+
+# View specific service logs
+./scripts/docker-dev.sh logs secureshare-server-dev
+
+# Open shell in container
+./scripts/docker-dev.sh shell secureshare-server-dev
+
+# Stop environment
+./scripts/docker-dev.sh stop
+
+# Clean up (removes all data)
+./scripts/docker-dev.sh clean
+```
+
+### Production Environment
+
+**Configure environment:**
+```bash
+# Copy and edit environment file
+cp docker.env.template .env
+nano .env  # Update JWT secrets, passwords, etc.
+```
+
+**Start production environment:**
+```bash
+# Build and start production containers
+./scripts/docker-prod.sh build
+./scripts/docker-prod.sh start
+
+# Or start with nginx reverse proxy
+./scripts/docker-prod.sh start-proxy
+```
+
+**Production management:**
+```bash
+# Create database backup
+./scripts/docker-prod.sh backup
+
+# Restore from backup
+./scripts/docker-prod.sh restore backups/backup_file.gz
+
+# Update containers
+./scripts/docker-prod.sh update
+
+# View logs
+./scripts/docker-prod.sh logs
+
+# Check status
+./scripts/docker-prod.sh status
+```
+
+## 💻 Local Development (Alternative)
 
 ### Server Setup
 
-1. **Clone and navigate to server directory**
+1. **Navigate to server directory**
 ```bash
 cd FileSharing/server
 ```
@@ -85,21 +191,13 @@ npm install
 ```
 
 3. **Environment Configuration**
-Create a `.env` file in the server directory:
+Create a `.env` file:
 ```env
-# Database
 MONGO_URL=mongodb://localhost:27017/secureshare
-
-# Server
 PORT=8000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:3000
-
-# JWT Security (CHANGE IN PRODUCTION!)
 JWT_SECRET=your-super-secret-jwt-key-minimum-256-bits
 JWT_REFRESH_SECRET=your-super-secret-refresh-key-minimum-256-bits
-
-# Logging
+FRONTEND_URL=http://localhost:3000
 LOG_LEVEL=info
 ```
 
@@ -247,7 +345,79 @@ curl -X GET http://localhost:8000/api/file/FILE_ID \
 - **Temporary Files**: `uploads/temp/`
 - **Logs**: `logs/`
 
+### Docker Configuration
+
+#### Container Ports
+| Service | Internal Port | External Port | Description |
+|---------|---------------|---------------|-------------|
+| Frontend | 3000 | 3000 | React development server |
+| Backend | 8000 | 8000 | Node.js API server |
+| MongoDB | 27017 | 27017 | Database |
+| Redis | 6379 | 6379 | Session storage |
+| Nginx | 80/443 | 80/443 | Reverse proxy (production) |
+
+#### Docker Volumes
+| Volume | Purpose | Persistence |
+|--------|---------|-------------|
+| `mongodb_data` | Database storage | Persistent |
+| `server_uploads` | Encrypted files | Persistent |
+| `server_logs` | Application logs | Persistent |
+| `redis_data` | Session data | Persistent |
+
+#### Container Resources
+- **Memory Limit**: 512MB per container (configurable)
+- **CPU Limit**: 1 core per container (configurable)
+- **Restart Policy**: `unless-stopped`
+- **Health Checks**: Enabled for all services
+
 ## 🐛 Troubleshooting
+
+### Docker Issues
+
+1. **Container fails to start**
+   ```bash
+   # Check container logs
+   ./scripts/docker-dev.sh logs <service-name>
+   
+   # Check Docker daemon
+   docker info
+   ```
+
+2. **Port conflicts**
+   ```bash
+   # Check what's using the port
+   lsof -i :3000
+   lsof -i :8000
+   lsof -i :27017
+   
+   # Stop conflicting services or change ports in docker-compose.yml
+   ```
+
+3. **Database connection issues**
+   ```bash
+   # Check MongoDB container
+   ./scripts/docker-dev.sh logs secureshare-db-dev
+   
+   # Test connection
+   ./scripts/docker-dev.sh shell secureshare-db-dev
+   mongosh
+   ```
+
+4. **File permission errors**
+   ```bash
+   # Fix ownership (Linux/macOS)
+   sudo chown -R $USER:$USER uploads/ logs/
+   ```
+
+5. **Build failures**
+   ```bash
+   # Clean Docker cache
+   docker system prune -a
+   
+   # Rebuild without cache
+   ./scripts/docker-dev.sh clean
+   ./scripts/docker-dev.sh build
+   ```
 
 ### Common Issues
 
@@ -267,6 +437,15 @@ curl -X GET http://localhost:8000/api/file/FILE_ID \
    - Verify `FRONTEND_URL` in environment
    - Check allowed origins in server config
 
+5. **Container Health Check Failures**
+   ```bash
+   # Check service health
+   docker-compose ps
+   
+   # Inspect health check logs
+   docker inspect <container-name>
+   ```
+
 ## 📈 Performance Considerations
 
 - **Database Indexing**: Optimized queries with proper indexes
@@ -277,7 +456,8 @@ curl -X GET http://localhost:8000/api/file/FILE_ID \
 
 ## 🔮 Future Enhancements
 
-- [ ] Virus scanning integration
+### Security & Features
+- [ ] Virus scanning integration (ClamAV)
 - [ ] Email notifications
 - [ ] Two-factor authentication
 - [ ] File sharing links with expiration
@@ -286,6 +466,18 @@ curl -X GET http://localhost:8000/api/file/FILE_ID \
 - [ ] Advanced admin dashboard
 - [ ] API key authentication
 - [ ] File thumbnails/previews
+
+### Infrastructure & DevOps
+- [ ] Kubernetes deployment manifests
+- [ ] Helm charts
+- [ ] CI/CD pipeline with GitHub Actions
+- [ ] SSL certificate automation (Let's Encrypt)
+- [ ] Monitoring with Prometheus & Grafana
+- [ ] Centralized logging with ELK stack
+- [ ] Auto-scaling configuration
+- [ ] Multi-region deployment
+- [ ] Container security scanning
+- [ ] Backup automation to cloud storage
 
 ## 📄 License
 

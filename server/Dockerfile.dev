@@ -1,0 +1,30 @@
+# Development Dockerfile for Node.js server
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install development dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm install
+
+# Create necessary directories
+RUN mkdir -p uploads/encrypted uploads/temp logs
+
+# Expose ports
+EXPOSE 8000 9229
+
+# Install nodemon globally for hot reloading
+RUN npm install -g nodemon
+
+# Default command (can be overridden in docker-compose)
+CMD ["npm", "run", "dev"] 
