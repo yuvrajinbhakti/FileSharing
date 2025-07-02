@@ -21,7 +21,7 @@ export const generateIV = () => {
 export const encryptFile = async (inputPath, outputPath, key) => {
     return new Promise((resolve, reject) => {
         const iv = generateIV();
-        const cipher = crypto.createCipher(algorithm, key, iv);
+        const cipher = crypto.createCipherGCM(algorithm, key, iv);
         
         const input = fs.createReadStream(inputPath);
         const output = fs.createWriteStream(outputPath);
@@ -70,7 +70,7 @@ export const decryptFile = async (inputPath, outputPath, key) => {
                 // Extract encrypted content
                 const encryptedData = data.slice(ivLength, -tagLength);
                 
-                const decipher = crypto.createDecipher(algorithm, key, iv);
+                const decipher = crypto.createDecipherGCM(algorithm, key, iv);
                 decipher.setAuthTag(tag);
                 
                 const decrypted = Buffer.concat([
@@ -93,7 +93,7 @@ export const decryptFile = async (inputPath, outputPath, key) => {
 // Encrypt text data
 export const encryptText = (text, key) => {
     const iv = generateIV();
-    const cipher = crypto.createCipher(algorithm, key, iv);
+    const cipher = crypto.createCipherGCM(algorithm, key, iv);
     
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -109,7 +109,7 @@ export const encryptText = (text, key) => {
 
 // Decrypt text data
 export const decryptText = (encryptedData, key, iv, tag) => {
-    const decipher = crypto.createDecipher(algorithm, key, Buffer.from(iv, 'hex'));
+    const decipher = crypto.createDecipherGCM(algorithm, key, Buffer.from(iv, 'hex'));
     decipher.setAuthTag(Buffer.from(tag, 'hex'));
     
     let decrypted = decipher.update(encryptedData, 'hex', 'utf8');

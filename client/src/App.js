@@ -1,72 +1,297 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Login from './components/Login';
+import Register from './components/Register';
+import ProtectedRoute from './components/ProtectedRoute';
+import { fileAPI } from './service/api';
 import './App.css';
-import { uploadFile } from './service/api';
+import './components/Dashboard.css';
 
-function App() {
-  const [file, setFile] = useState('');
-  const [result, setResult] = useState('');
-  const [copySuccess, setCopySuccess] = useState(false); // State to handle copy success message
+// Dashboard Component (inline since file creation had issues)
+const Dashboard = () => {
+    const { user, logout, isAdmin } = useAuth();
+    const [files, setFiles] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [error, setError] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null);
 
-  const fileInputRef = useRef();
+    const fileInputRef = useRef();
 
-  useEffect(() => {
-    const getImage = async () => {
-      if (file) {
-        const data = new FormData();
-        data.append("name", file.name);
-        data.append("file", file);
+    useEffect(() => {
+        fetchFiles();
+    }, []);
+
+    const fetchFiles = async () => {
+        try {
+            setLoading(true);
+            const response = await fileAPI.getUserFiles(1, 10);
+            setFiles(response.files);
+            setError(null);
+        } catch (error) {
+            setError('Failed to load files');
+            console.error('Error fetching files:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        setUploadProgress(0);
 
         try {
-          const response = await uploadFile(data);
-          setResult(response.path);
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('accessLevel', 'private');
+
+            await fileAPI.upload(formData, (progressEvent) => {
+                const percentCompleted = Math.round(
+                    (progressEvent.loaded * 100) / progressEvent.total
+                );
+                setUploadProgress(percentCompleted);
+            });
+
+            setSuccessMessage('File uploaded successfully!');
+            fetchFiles();
+            setTimeout(() => setSuccessMessage(null), 3000);
         } catch (error) {
-          console.error('Error uploading file:', error);
+            setError('Failed to upload file');
+            console.error('Upload error:', error);
+        } finally {
+            setUploading(false);
+            setUploadProgress(0);
         }
-      }
-    }
-    getImage();
-  }, [file])
+    };
 
-  const onUploadClick = () => {
-    fileInputRef.current.click();
-  }
+    const handleDownload = async (fileId, fileName) => {
+        try {
+            const response = await fileAPI.downloadFile(fileId);
+            
+            const blob = new Blob([response.data]);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            setSuccessMessage('File downloaded successfully!');
+            setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (error) {
+            setError('Failed to download file');
+            console.error('Download error:', error);
+        }
+    };
 
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(result);
-      setCopySuccess(true);
-      setTimeout(() => {
-        setCopySuccess(false);
-      }, 3000); // Clear success message after 3 seconds
-    } catch (error) {
-      console.error('Failed to copy:', error);
-    }
-  }
+    const handleDelete = async (fileId, fileName) => {
+        if (!window.confirm(`Are you sure you want to delete "${fileName}"?`)) {
+            return;
+        }
 
-  return (
-    <div className='container'>
-      <div className='wrapper'>
-        <h1>Simple file sharing!</h1>
-        <p>Upload and share the download link.</p>
-        
-        <button onClick={onUploadClick}>Upload</button>
-        <input
-          type="file"
-          ref={fileInputRef}
-          style={{ display: "none" }}
-          onChange={(e) => setFile(e.target.files[0])}
-        />
+        try {
+            await fileAPI.deleteFile(fileId);
+            setSuccessMessage('File deleted successfully!');
+            fetchFiles();
+            setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (error) {
+            setError('Failed to delete file');
+            console.error('Delete error:', error);
+        }
+    };
 
-        {result && (
-          <div>
-            <a href={result} target='_blank' rel='noopener noreferrer'>{result}</a>
-            <button onClick={copyToClipboard}>Copy URL</button>
-            {copySuccess && <span style={{ marginLeft: '10px', color: 'green' }}>✅Copied successfully!</span>}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    const formatFileSize = (bytes) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    return (
+        <div className="dashboard-container">
+            <header className="dashboard-header">
+                <div className="header-content">
+                    <div className="header-left">
+                        <h1>🔐 SecureShare</h1>
+                        <span className="user-welcome">
+                            Welcome, {user?.username}
+                            {isAdmin && <span className="admin-badge">Admin</span>}
+                        </span>
+                    </div>
+                    <div className="header-right">
+                        <button 
+                            className="btn btn-secondary"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            📤 Upload File
+                        </button>
+                        <button 
+                            className="btn btn-outline"
+                            onClick={logout}
+                        >
+                            🚪 Logout
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main className="dashboard-main">
+                {error && (
+                    <div className="message message-error">
+                        <span>⚠️ {error}</span>
+                        <button onClick={() => setError(null)}>✕</button>
+                    </div>
+                )}
+                
+                {successMessage && (
+                    <div className="message message-success">
+                        <span>✅ {successMessage}</span>
+                        <button onClick={() => setSuccessMessage(null)}>✕</button>
+                    </div>
+                )}
+
+                <div className="upload-section">
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        onChange={handleUpload}
+                        style={{ display: 'none' }}
+                    />
+                    
+                    {uploading && (
+                        <div className="upload-progress">
+                            <div className="progress-bar">
+                                <div 
+                                    className="progress-fill"
+                                    style={{ width: `${uploadProgress}%` }}
+                                />
+                            </div>
+                            <span className="progress-text">
+                                Uploading... {uploadProgress}%
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="files-section">
+                    <h2>Your Files ({files.length})</h2>
+                    
+                    {loading ? (
+                        <div className="loading-state">
+                            <div className="loading-spinner"></div>
+                            <p>Loading your files...</p>
+                        </div>
+                    ) : files.length === 0 ? (
+                        <div className="empty-state">
+                            <div className="empty-icon">📭</div>
+                            <h3>No files found</h3>
+                            <p>Upload your first file to get started</p>
+                        </div>
+                    ) : (
+                        <div className="files-grid">
+                            {files.map((file) => (
+                                <div key={file.id} className="file-card">
+                                    <div className="file-header">
+                                        <div className="file-icon">
+                                            {file.mimeType?.startsWith('image/') ? '🖼️' :
+                                             file.mimeType?.startsWith('video/') ? '🎥' :
+                                             file.mimeType?.startsWith('audio/') ? '🎵' :
+                                             file.mimeType?.includes('pdf') ? '📕' : '📄'}
+                                        </div>
+                                        <div className="file-access-level">
+                                            {file.accessLevel === 'private' ? '🔒' :
+                                             file.accessLevel === 'public' ? '🌐' : '👥'}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="file-content">
+                                        <h3 className="file-name" title={file.originalName}>
+                                            {file.originalName}
+                                        </h3>
+                                        <div className="file-meta">
+                                            <span className="file-size">
+                                                {formatFileSize(file.size)}
+                                            </span>
+                                            <span className="file-date">
+                                                {formatDate(file.uploadDate)}
+                                            </span>
+                                        </div>
+                                        <div className="file-stats">
+                                            <span className="download-count">
+                                                📥 {file.downloadCount} downloads
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="file-actions">
+                                        <button
+                                            className="btn btn-sm btn-primary"
+                                            onClick={() => handleDownload(file.id, file.originalName)}
+                                            title="Download file"
+                                        >
+                                            📥
+                                        </button>
+                                        <button
+                                            className="btn btn-sm btn-danger"
+                                            onClick={() => handleDelete(file.id, file.originalName)}
+                                            title="Delete file"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </main>
+        </div>
+    );
+};
+
+function App() {
+    return (
+        <AuthProvider>
+            <Router>
+                <div className="App">
+                    <Routes>
+                        {/* Public routes */}
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        
+                        {/* Protected routes */}
+                        <Route path="/dashboard" element={
+                            <ProtectedRoute>
+                                <Dashboard />
+                            </ProtectedRoute>
+                        } />
+                        
+                        {/* Default redirect */}
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                    </Routes>
+                </div>
+            </Router>
+        </AuthProvider>
+    );
 }
 
 export default App;
