@@ -208,6 +208,140 @@ export const auditLog = {
             status,
             timestamp: new Date().toISOString()
         });
+    },
+    
+    // File sharing events
+    fileShare: (userId, username, fileId, fileName, shareUrl, expiresAt) => {
+        logger.log('audit', 'File share link created', {
+            event: 'FILE_SHARE',
+            userId,
+            username,
+            fileId,
+            fileName,
+            shareUrl,
+            expiresAt,
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    linkRevoked: (userId, username, linkId, fileName) => {
+        logger.log('audit', 'Share link revoked', {
+            event: 'LINK_REVOKED',
+            userId,
+            username,
+            linkId,
+            fileName,
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    // Bulk operations
+    bulkDownload: (userId, username, fileCount, zipName) => {
+        logger.log('audit', 'Bulk download created', {
+            event: 'BULK_DOWNLOAD',
+            userId,
+            username,
+            fileCount,
+            zipName,
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    bulkUpdate: (userId, username, fileCount, updates) => {
+        logger.log('audit', 'Bulk metadata update', {
+            event: 'BULK_UPDATE',
+            userId,
+            username,
+            fileCount,
+            updates,
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    // System events
+    fileExpired: (userId, fileName, fileId) => {
+        logger.log('audit', 'File expired and removed', {
+            event: 'FILE_EXPIRED',
+            userId,
+            fileName,
+            fileId,
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    rateLimitReset: () => {
+        logger.log('audit', 'Daily rate limits reset', {
+            event: 'RATE_LIMIT_RESET',
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    schedulerInitialized: () => {
+        logger.log('audit', 'Scheduler initialized', {
+            event: 'SCHEDULER_INITIALIZED',
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    dailyReport: (metrics) => {
+        logger.log('audit', 'Daily report generated', {
+            event: 'DAILY_REPORT',
+            metrics,
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    // Two-factor authentication
+    twoFactorEnabled: (userId, username) => {
+        logger.log('audit', 'Two-factor authentication enabled', {
+            event: 'TWO_FACTOR_ENABLED',
+            userId,
+            username,
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    twoFactorDisabled: (userId, username) => {
+        logger.log('audit', 'Two-factor authentication disabled', {
+            event: 'TWO_FACTOR_DISABLED',
+            userId,
+            username,
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    // Password reset
+    passwordResetRequest: (userId, username, email) => {
+        logger.log('audit', 'Password reset requested', {
+            event: 'PASSWORD_RESET_REQUEST',
+            userId,
+            username,
+            email,
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    passwordResetComplete: (userId, username) => {
+        logger.log('audit', 'Password reset completed', {
+            event: 'PASSWORD_RESET_COMPLETE',
+            userId,
+            username,
+            timestamp: new Date().toISOString()
+        });
+    },
+    
+    // Shared file download
+    sharedFileDownload: (userId, username, fileId, fileName, ip, linkId) => {
+        logger.log('audit', 'Shared file downloaded', {
+            event: 'SHARED_FILE_DOWNLOAD',
+            userId,
+            username,
+            fileId,
+            fileName,
+            ip,
+            linkId,
+            timestamp: new Date().toISOString()
+        });
     }
 };
 

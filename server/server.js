@@ -2,9 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import mongoose from 'mongoose';
 import router from './routes/routes.js';
 import DBConnection from './database/db.js';
+import { connectRedis, disconnectRedis } from './database/redis.js';
 import { auditLog, logInfo, logError } from './utils/logger.js';
+import { initEmailService } from './utils/email.js';
+import { initializeScheduler } from './utils/scheduler.js';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -123,31 +127,62 @@ const PORT = process.env.PORT || 8000;
 try {
     await DBConnection();
     auditLog.databaseConnection('established');
+    
+    // Connect to Redis
+    await connectRedis();
+    
+    // Initialize email service
+    await initEmailService();
+    
+    // Initialize scheduler
+    initializeScheduler();
 } catch (error) {
-    logError('Database connection failed', error);
+    logError('Service initialization failed', error);
     auditLog.databaseConnection('failed');
     process.exit(1);
 }
 
 // Graceful shutdown
-const gracefulShutdown = (signal) => {
+const gracefulShutdown = async (signal) => {
     logInfo(`Received ${signal}. Starting graceful shutdown...`);
-    auditLog.serverShutdown();
     
-    server.close(() => {
-        logInfo('Server closed. Exiting process.');
+    try {
+        // Stop accepting new connections
+        server.close(() => {
+            logInfo('HTTP server closed');
+        });
+        
+        // Close database connections
+        await mongoose.connection.close();
+        logInfo('Database connection closed');
+        
+        // Close Redis connection
+        await disconnectRedis();
+        
+        auditLog.serverShutdown();
+        logInfo('Graceful shutdown completed');
+        
         process.exit(0);
-    });
-    
-    // Force close after 10 seconds
-    setTimeout(() => {
-        logError('Could not close connections in time, forcefully shutting down');
+    } catch (error) {
+        logError('Error during graceful shutdown', error);
         process.exit(1);
-    }, 10000);
+    }
 };
 
+// Handle shutdown signals
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    logError('Uncaught Exception', error);
+    gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    logError('Unhandled Rejection', { reason, promise });
+    gracefulShutdown('unhandledRejection');
+});
 
 // Start server
 const server = app.listen(PORT, () => {
@@ -157,6 +192,7 @@ const server = app.listen(PORT, () => {
     console.log('🚀 SecureShare Server Started');
     console.log(`📡 Server running on: http://localhost:${PORT}`);
     console.log(`🔐 Security features enabled: JWT Auth, AES-256 Encryption, Audit Logging`);
+    console.log(`🚀 New features: Redis Cache, Email Service, 2FA, File Sharing, Bulk Operations`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 

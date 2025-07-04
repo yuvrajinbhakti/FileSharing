@@ -26,7 +26,15 @@
     "helmet": "^6.1.5",
     "express-validator": "^6.15.0",
     "winston": "^3.8.2",
-    "winston-mongodb": "^5.1.1"
+    "winston-mongodb": "^5.1.1",
+    "redis": "^4.6.5",
+    "nodemailer": "^6.9.1",
+    "speakeasy": "^2.0.0",
+    "qrcode": "^1.5.3",
+    "archiver": "^5.3.1",
+    "node-cron": "^3.0.2",
+    "sharp": "^0.32.0",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.21"
