@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --silent
+RUN npm install --silent
 
 # Copy source code
 COPY . .
@@ -23,8 +23,7 @@ FROM nginx:alpine AS production
 RUN apk add --no-cache dumb-init
 
 # Create non-root user
-RUN addgroup -g 1001 -S nginx && \
-    adduser -S appuser -u 1001 -G nginx
+RUN adduser -S appuser -u 1001 -G nginx
 
 # Copy custom nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf

@@ -36,7 +36,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 8000
-      MONGO_URL: mongodb://secureshare-user:${MONGO_USER_PASSWORD:-userpassword123}@secureshare-db:27017/secureshare?authSource=secureshare
+      MONGO_URL: ${MONGO_URL:-mongodb://secureshare-mongodb:27017/secureshare}
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production-256-bits}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-this-in-production-256-bits}
       FRONTEND_URL: http://localhost:3000
