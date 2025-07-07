@@ -8,9 +8,19 @@ dotenv.config();
 const getRedisConfig = () => {
     // If REDIS_URL is provided (cloud deployment), use it
     if (process.env.REDIS_URL) {
-        return {
+        const config = {
             url: process.env.REDIS_URL
         };
+        
+        // If URL contains upstash.io, enable TLS
+        if (process.env.REDIS_URL.includes('upstash.io')) {
+            config.socket = {
+                tls: true,
+                rejectUnauthorized: false
+            };
+        }
+        
+        return config;
     }
     
     // Otherwise use individual config (local development)
