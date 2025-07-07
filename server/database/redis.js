@@ -5,22 +5,27 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Redis client configuration
-const redisConfig = {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: process.env.REDIS_PORT || 6379,
-    password: process.env.REDIS_PASSWORD || 'redispassword123',
-    retryDelayOnFailover: 100,
-    maxRetriesPerRequest: 3,
-    lazyConnect: true
+const getRedisConfig = () => {
+    // If REDIS_URL is provided (cloud deployment), use it
+    if (process.env.REDIS_URL) {
+        return {
+            url: process.env.REDIS_URL
+        };
+    }
+    
+    // Otherwise use individual config (local development)
+    return {
+        socket: {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: process.env.REDIS_PORT || 6379,
+        },
+        password: process.env.REDIS_PASSWORD || 'redispassword123',
+    };
 };
 
 // Create Redis client
 const redisClient = createClient({
-    socket: {
-        host: redisConfig.host,
-        port: redisConfig.port,
-    },
-    password: redisConfig.password,
+    ...getRedisConfig(),
     retry_strategy: (options) => {
         if (options.error && options.error.code === 'ECONNREFUSED') {
             logError('Redis connection refused');

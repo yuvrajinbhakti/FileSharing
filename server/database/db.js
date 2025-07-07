@@ -7,10 +7,8 @@ dotenv.config();
 const DBConnection = async () => {
     const MONGODB_URI = process.env.MONGO_URL;
     
-    // Skip database connection if no MONGO_URL provided
     if (!MONGODB_URI) {
-        logInfo('No MONGO_URL provided, skipping database connection');
-        return;
+        throw new Error('MONGO_URL environment variable is required');
     }
     
     try {

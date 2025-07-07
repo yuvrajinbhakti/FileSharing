@@ -137,30 +137,23 @@ const PORT = process.env.PORT || 8000;
 try {
     await DBConnection();
     auditLog.databaseConnection('established');
-} catch (error) {
-    logError('Database connection failed, continuing without database', error);
-    auditLog.databaseConnection('failed');
-}
-
-// Connect to Redis (optional)
-try {
+    
+    // Connect to Redis
     await connectRedis();
-} catch (error) {
-    logError('Redis connection failed, continuing without Redis', error);
-}
-
-// Initialize email service (optional)
-try {
+    
+    // Initialize email service
     await initEmailService();
-} catch (error) {
-    logError('Email service initialization failed, continuing without email', error);
-}
-
-// Initialize scheduler (optional)
-try {
+    
+    // Initialize scheduler
     initializeScheduler();
 } catch (error) {
-    logError('Scheduler initialization failed, continuing without scheduler', error);
+    logError('Service initialization failed', error);
+    auditLog.databaseConnection('failed');
+    console.error('❌ Failed to initialize services:', error.message);
+    console.error('🔧 Please check your environment variables:');
+    console.error('   - MONGO_URL: MongoDB connection string');
+    console.error('   - REDIS_URL: Redis connection string');
+    process.exit(1);
 }
 
 // Graceful shutdown
