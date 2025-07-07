@@ -24,6 +24,50 @@ winston.addColors({
     debug: 'blue'
 });
 
+// Create logger transports
+const transports = [
+    // Console logging
+    new winston.transports.Console({
+        format: winston.format.combine(
+            winston.format.colorize({ all: true }),
+            winston.format.simple()
+        )
+    }),
+    
+    // File logging for errors
+    new winston.transports.File({ 
+        filename: 'logs/error.log', 
+        level: 'error',
+        maxsize: 5242880, // 5MB
+        maxFiles: 5
+    }),
+    
+    // File logging for all logs
+    new winston.transports.File({ 
+        filename: 'logs/combined.log',
+        maxsize: 5242880, // 5MB
+        maxFiles: 5
+    })
+];
+
+// Add MongoDB transport only if MONGO_URL is available
+if (process.env.MONGO_URL) {
+    transports.push(
+        new winston.transports.MongoDB({
+            db: process.env.MONGO_URL,
+            collection: 'audit_logs',
+            level: 'audit',
+            options: {
+                useUnifiedTopology: true
+            },
+            format: winston.format.combine(
+                winston.format.timestamp(),
+                winston.format.json()
+            )
+        })
+    );
+}
+
 // Create logger instance
 const logger = winston.createLogger({
     levels: auditLevels,
@@ -39,44 +83,7 @@ const logger = winston.createLogger({
         })
     ),
     defaultMeta: { service: 'secure-file-share' },
-    transports: [
-        // Console logging
-        new winston.transports.Console({
-            format: winston.format.combine(
-                winston.format.colorize({ all: true }),
-                winston.format.simple()
-            )
-        }),
-        
-        // File logging for errors
-        new winston.transports.File({ 
-            filename: 'logs/error.log', 
-            level: 'error',
-            maxsize: 5242880, // 5MB
-            maxFiles: 5
-        }),
-        
-        // File logging for all logs
-        new winston.transports.File({ 
-            filename: 'logs/combined.log',
-            maxsize: 5242880, // 5MB
-            maxFiles: 5
-        }),
-        
-        // MongoDB logging for audit trails
-        new winston.transports.MongoDB({
-            db: process.env.MONGO_URL,
-            collection: 'audit_logs',
-            level: 'audit',
-            options: {
-                useUnifiedTopology: true
-            },
-            format: winston.format.combine(
-                winston.format.timestamp(),
-                winston.format.json()
-            )
-        })
-    ]
+    transports: transports
 });
 
 // Security audit logging functions
