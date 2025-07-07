@@ -5,7 +5,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const DBConnection = async () => {
-    const MONGODB_URI = process.env.MONGO_URL || 'mongodb://localhost:27017/secureshare';
+    const MONGODB_URI = process.env.MONGO_URL;
+    
+    // Skip database connection if no MONGO_URL provided
+    if (!MONGODB_URI) {
+        logInfo('No MONGO_URL provided, skipping database connection');
+        return;
+    }
     
     try {
         // Set mongoose options for better security and performance

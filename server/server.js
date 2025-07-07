@@ -94,6 +94,16 @@ requiredDirs.forEach(dir => {
     }
 });
 
+// Health check route (doesn't require database)
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        service: 'SecureShare API',
+        version: '1.0.0'
+    });
+});
+
 // API routes
 app.use('/api', router);
 
@@ -127,19 +137,30 @@ const PORT = process.env.PORT || 8000;
 try {
     await DBConnection();
     auditLog.databaseConnection('established');
-    
-    // Connect to Redis
+} catch (error) {
+    logError('Database connection failed, continuing without database', error);
+    auditLog.databaseConnection('failed');
+}
+
+// Connect to Redis (optional)
+try {
     await connectRedis();
-    
-    // Initialize email service
+} catch (error) {
+    logError('Redis connection failed, continuing without Redis', error);
+}
+
+// Initialize email service (optional)
+try {
     await initEmailService();
-    
-    // Initialize scheduler
+} catch (error) {
+    logError('Email service initialization failed, continuing without email', error);
+}
+
+// Initialize scheduler (optional)
+try {
     initializeScheduler();
 } catch (error) {
-    logError('Service initialization failed', error);
-    auditLog.databaseConnection('failed');
-    process.exit(1);
+    logError('Scheduler initialization failed, continuing without scheduler', error);
 }
 
 // Graceful shutdown
