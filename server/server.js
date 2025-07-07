@@ -27,11 +27,26 @@ app.use(cors({
     origin: [
         process.env.FRONTEND_URL || 'http://localhost:3000',
         'http://localhost:3000',
-        'http://127.0.0.1:3000'
+        'http://127.0.0.1:3000',
+        'https://file-sharing-eight-wheat.vercel.app',
+        'https://file-sharing-eight-wheat.vercel.app/',
+        // /\.vercel\.app$/,  // Allow all Vercel subdomains
+        // /\.netlify\.app$/, // Allow Netlify deployments
+        // 'https://secureshare.vercel.app', // Alternative deployment URL
+        // 'https://secureshare.netlify.app' // Alternative deployment URL
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+        'Content-Type', 
+        'Authorization', 
+        'X-Requested-With',
+        'Accept',
+        'Origin',
+        'Access-Control-Request-Method',
+        'Access-Control-Request-Headers'
+    ],
+    optionsSuccessStatus: 200 // For legacy browser support
 }));
 
 // Global rate limiting
