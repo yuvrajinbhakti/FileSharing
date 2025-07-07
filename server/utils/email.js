@@ -252,11 +252,13 @@ export const initEmailService = async () => {
         if (isConfigured) {
             logInfo('Email service initialized successfully');
         } else {
-            logError('Email service initialization failed');
+            logError('Email service initialization failed - check SMTP credentials');
         }
         return isConfigured;
     } else {
-        logInfo('Email service not configured - SMTP credentials not provided');
+        logInfo('Email service not configured - add SMTP_USER and SMTP_PASS to enable email features');
+        logInfo('For Gmail: SMTP_USER=your-email@gmail.com, SMTP_PASS=your-app-password');
+        logInfo('For SendGrid: SMTP_HOST=smtp.sendgrid.net, SMTP_USER=apikey, SMTP_PASS=your-api-key');
         return false;
     }
 };

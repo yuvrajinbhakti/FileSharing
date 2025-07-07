@@ -252,8 +252,16 @@ export const redisUtils = {
     // System health and metrics
     async updateSystemMetrics(metrics) {
         try {
-            await redisClient.hSet('system:metrics', metrics);
-            await redisClient.expire('system:metrics', 300); // 5 minutes
+            // Convert metrics object to individual field-value pairs
+            const fields = [];
+            for (const [key, value] of Object.entries(metrics)) {
+                fields.push(key, String(value));
+            }
+            
+            if (fields.length > 0) {
+                await redisClient.hSet('system:metrics', fields);
+                await redisClient.expire('system:metrics', 300); // 5 minutes
+            }
             return true;
         } catch (error) {
             logError('Error updating system metrics', error);

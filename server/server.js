@@ -94,13 +94,34 @@ requiredDirs.forEach(dir => {
     }
 });
 
+// Root route - API info
+app.get('/', (req, res) => {
+    res.json({
+        name: 'SecureShare API',
+        version: '1.0.0',
+        status: 'Running',
+        endpoints: {
+            health: '/api/health',
+            auth: '/api/auth',
+            files: '/api/files',
+            sharing: '/api/sharing',
+            users: '/api/users'
+        },
+        documentation: 'https://github.com/yuvrajinbhakti/FileSharing',
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Health check route (doesn't require database)
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'OK',
         timestamp: new Date().toISOString(),
         service: 'SecureShare API',
-        version: '1.0.0'
+        version: '1.0.0',
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        environment: process.env.NODE_ENV || 'development'
     });
 });
 
@@ -124,10 +145,23 @@ app.use((error, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
-    auditLog.unauthorizedAccess(req.ip, req.get('User-Agent'), req.originalUrl, '404 Not Found');
+    // Only log suspicious 404s as security events
+    const suspiciousPatterns = ['/admin', '/wp-admin', '/.env', '/config', '/api/admin'];
+    const isSuspicious = suspiciousPatterns.some(pattern => req.originalUrl.includes(pattern));
+    
+    if (isSuspicious) {
+        auditLog.unauthorizedAccess(req.ip, req.get('User-Agent'), req.originalUrl, '404 Not Found - Suspicious');
+    }
+    
     res.status(404).json({
         error: 'Endpoint not found',
-        code: 'ENDPOINT_NOT_FOUND'
+        code: 'ENDPOINT_NOT_FOUND',
+        available_endpoints: {
+            root: '/',
+            health: '/api/health',
+            auth: '/api/auth',
+            files: '/api/files'
+        }
     });
 });
 
