@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import ForgotPassword from './ForgotPassword';
 import './Auth.css';
 
 const Login = () => {
@@ -10,6 +11,7 @@ const Login = () => {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [showForgotPassword, setShowForgotPassword] = useState(false);
 
     const { login, error, clearError } = useAuth();
     const navigate = useNavigate();
@@ -38,6 +40,14 @@ const Login = () => {
             setIsLoading(false);
         }
     };
+
+    if (showForgotPassword) {
+        return (
+            <ForgotPassword 
+                onBack={() => setShowForgotPassword(false)}
+            />
+        );
+    }
 
     return (
         <div className="auth-container">
@@ -111,6 +121,15 @@ const Login = () => {
                 </form>
 
                 <div className="auth-footer">
+                    <p>
+                        <button 
+                            type="button"
+                            className="link-button"
+                            onClick={() => setShowForgotPassword(true)}
+                        >
+                            Forgot Password?
+                        </button>
+                    </p>
                     <p>
                         Don't have an account?{' '}
                         <Link to="/register" className="auth-link">

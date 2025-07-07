@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import Register from './components/Register';
 import ProtectedRoute from './components/ProtectedRoute';
+import ShareModal from './components/ShareModal';
 import { fileAPI } from './service/api';
 import './App.css';
 import './components/Dashboard.css';
@@ -17,6 +18,7 @@ const Dashboard = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
+    const [shareModal, setShareModal] = useState({ isOpen: false, file: null });
 
     const fileInputRef = useRef();
 
@@ -105,6 +107,14 @@ const Dashboard = () => {
             setError('Failed to delete file');
             console.error('Delete error:', error);
         }
+    };
+
+    const handleShare = (file) => {
+        setShareModal({ isOpen: true, file });
+    };
+
+    const closeShareModal = () => {
+        setShareModal({ isOpen: false, file: null });
     };
 
     const formatFileSize = (bytes) => {
@@ -250,6 +260,13 @@ const Dashboard = () => {
                                             📥
                                         </button>
                                         <button
+                                            className="btn btn-sm btn-secondary"
+                                            onClick={() => handleShare(file)}
+                                            title="Share file"
+                                        >
+                                            🔗
+                                        </button>
+                                        <button
                                             className="btn btn-sm btn-danger"
                                             onClick={() => handleDelete(file.id, file.originalName)}
                                             title="Delete file"
@@ -263,6 +280,12 @@ const Dashboard = () => {
                     )}
                 </div>
             </main>
+
+            <ShareModal 
+                file={shareModal.file}
+                isOpen={shareModal.isOpen}
+                onClose={closeShareModal}
+            />
         </div>
     );
 };

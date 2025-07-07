@@ -116,6 +116,41 @@ export const authAPI = {
         const response = await api.post('/auth/refresh', { refreshToken });
         setTokens(response.data.accessToken, refreshToken);
         return response.data;
+    },
+    
+    // Enhanced auth features
+    requestPasswordReset: async (email) => {
+        const response = await api.post('/auth/reset-password/request', { email });
+        return response.data;
+    },
+    
+    resetPassword: async (token, newPassword, confirmPassword) => {
+        const response = await api.post('/auth/reset-password/confirm', { 
+            token, newPassword, confirmPassword 
+        });
+        return response.data;
+    },
+    
+    // Two-factor authentication
+    setup2FA: async () => {
+        const response = await api.post('/auth/2fa/setup');
+        return response.data;
+    },
+    
+    enable2FA: async (token) => {
+        const response = await api.post('/auth/2fa/enable', { token });
+        return response.data;
+    },
+    
+    disable2FA: async (password) => {
+        const response = await api.post('/auth/2fa/disable', { password });
+        return response.data;
+    },
+    
+    // User activity
+    getUserActivity: async (limit = 20) => {
+        const response = await api.get(`/auth/activity?limit=${limit}`);
+        return response.data;
     }
 };
 
@@ -145,6 +180,36 @@ export const fileAPI = {
     
     deleteFile: async (fileId) => {
         const response = await api.delete(`/file/${fileId}`);
+        return response.data;
+    },
+    
+    // File sharing
+    createShareLink: async (fileId, options) => {
+        const response = await api.post('/sharing/create', { fileId, ...options });
+        return response.data;
+    },
+    
+    getShareLink: async (linkId, accessToken) => {
+        const response = await api.get(`/sharing/${linkId}/${accessToken}`);
+        return response.data;
+    },
+    
+    downloadSharedFile: async (linkId, accessToken, password = null) => {
+        const response = await api.post(`/sharing/${linkId}/${accessToken}/download`, 
+            { password }, 
+            { responseType: 'blob' }
+        );
+        return response;
+    },
+    
+    // Bulk operations
+    createBulkDownload: async (fileIds, options = {}) => {
+        const response = await api.post('/bulk/download', { fileIds, ...options });
+        return response.data;
+    },
+    
+    bulkDeleteFiles: async (fileIds) => {
+        const response = await api.post('/bulk/delete', { fileIds });
         return response.data;
     }
 };
