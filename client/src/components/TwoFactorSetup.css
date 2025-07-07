@@ -1,0 +1,398 @@
+/* Two-Factor Authentication Setup Styles */
+.twofa-container {
+    background: white;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.twofa-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.twofa-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.8);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.twofa-content {
+    padding: 24px;
+}
+
+/* Status Card */
+.status-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.status-card.enabled {
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+}
+
+.status-icon {
+    font-size: 24px;
+}
+
+.status-text h4 {
+    margin: 0 0 4px 0;
+    color: #166534;
+    font-size: 1.1rem;
+}
+
+.status-text p {
+    margin: 0;
+    color: #15803d;
+    font-size: 0.9rem;
+}
+
+/* Setup Steps */
+.setup-step {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.step-info h4 {
+    margin: 0 0 8px 0;
+    color: #374151;
+    font-size: 1.1rem;
+}
+
+.step-info p {
+    margin: 0;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+/* QR Code Section */
+.qr-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 24px;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.qr-code {
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.manual-entry {
+    text-align: center;
+    width: 100%;
+}
+
+.manual-entry p {
+    margin: 0 0 12px 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.manual-code {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.manual-code code {
+    background-color: #f3f4f6;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 0.9rem;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+/* Verification Form */
+.verification-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.verification-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.verification-form label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 1rem;
+}
+
+.verification-form input {
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 18px;
+    text-align: center;
+    font-family: 'Monaco', 'Consolas', monospace;
+    letter-spacing: 2px;
+    transition: border-color 0.2s;
+    max-width: 200px;
+    margin: 0 auto;
+}
+
+.verification-form input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.verification-form small {
+    color: #6b7280;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+/* Completion Step */
+.completion-step {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.success-message {
+    background-color: #f0fdf4;
+    color: #166534;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #bbf7d0;
+    font-weight: 500;
+    text-align: center;
+}
+
+/* Backup Codes */
+.backup-codes-section h4 {
+    margin: 0 0 8px 0;
+    color: #dc2626;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.backup-codes-section p {
+    margin: 0 0 16px 0;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+.backup-codes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 16px;
+    background-color: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+}
+
+.backup-code {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+}
+
+.code-number {
+    font-size: 0.8rem;
+    color: #6b7280;
+    min-width: 20px;
+}
+
+.backup-code code {
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 0.9rem;
+    color: #374151;
+    font-weight: 600;
+}
+
+.backup-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Actions */
+.twofa-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+/* Error Message */
+.error-message {
+    background-color: #fef2f2;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #fecaca;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* Loading State */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 40px;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e5e7eb;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Button Styles */
+.btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: #667eea;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: #5a67d8;
+}
+
+.btn-secondary {
+    background-color: #6b7280;
+    color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: #4b5563;
+}
+
+.btn-danger {
+    background-color: #dc2626;
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #b91c1c;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+    .twofa-container {
+        width: 95%;
+        margin: 20px;
+    }
+
+    .twofa-header,
+    .twofa-content {
+        padding: 16px;
+    }
+
+    .qr-section {
+        padding: 16px;
+    }
+
+    .manual-code {
+        flex-direction: column;
+    }
+
+    .backup-codes {
+        grid-template-columns: 1fr;
+    }
+
+    .backup-actions {
+        flex-direction: column;
+    }
+}

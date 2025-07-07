@@ -5,6 +5,9 @@ import Login from './components/Login';
 import Register from './components/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import ShareModal from './components/ShareModal';
+import BulkOperations from './components/BulkOperations';
+import UserSettings from './components/UserSettings';
+import AdminPanel from './components/AdminPanel';
 import { fileAPI } from './service/api';
 import './App.css';
 import './components/Dashboard.css';
@@ -19,6 +22,11 @@ const Dashboard = () => {
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
     const [shareModal, setShareModal] = useState({ isOpen: false, file: null });
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [showBulkOperations, setShowBulkOperations] = useState(false);
+    const [showUserSettings, setShowUserSettings] = useState(false);
+    const [showAdminPanel, setShowAdminPanel] = useState(false);
+    const [selectionMode, setSelectionMode] = useState(false);
 
     const fileInputRef = useRef();
 
@@ -117,6 +125,42 @@ const Dashboard = () => {
         setShareModal({ isOpen: false, file: null });
     };
 
+    const toggleSelectionMode = () => {
+        setSelectionMode(!selectionMode);
+        setSelectedFiles([]);
+    };
+
+    const handleFileSelect = (file) => {
+        if (selectedFiles.find(f => f.id === file.id)) {
+            setSelectedFiles(selectedFiles.filter(f => f.id !== file.id));
+        } else {
+            setSelectedFiles([...selectedFiles, file]);
+        }
+    };
+
+    const handleSelectAll = () => {
+        if (selectedFiles.length === files.length) {
+            setSelectedFiles([]);
+        } else {
+            setSelectedFiles([...files]);
+        }
+    };
+
+    const handleBulkOperation = () => {
+        if (selectedFiles.length === 0) {
+            setError('Please select at least one file');
+            return;
+        }
+        setShowBulkOperations(true);
+    };
+
+    const handleBulkComplete = () => {
+        setShowBulkOperations(false);
+        setSelectedFiles([]);
+        setSelectionMode(false);
+        fetchFiles();
+    };
+
     const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -153,6 +197,27 @@ const Dashboard = () => {
                         >
                             📤 Upload File
                         </button>
+                        <button 
+                            className="btn btn-outline"
+                            onClick={toggleSelectionMode}
+                        >
+                            {selectionMode ? '✅ Cancel Select' : '📦 Select Multiple'}
+                        </button>
+                        <button 
+                            className="btn btn-outline"
+                            onClick={() => setShowUserSettings(true)}
+                        >
+                            ⚙️ Settings
+                        </button>
+                        {isAdmin && (
+                            <button 
+                                className="btn btn-outline"
+                                onClick={() => setShowAdminPanel(true)}
+                                style={{ color: '#ff6b6b', borderColor: '#ff6b6b' }}
+                            >
+                                👑 Admin Panel
+                            </button>
+                        )}
                         <button 
                             className="btn btn-outline"
                             onClick={logout}
@@ -202,7 +267,30 @@ const Dashboard = () => {
                 </div>
 
                 <div className="files-section">
-                    <h2>Your Files ({files.length})</h2>
+                    <div className="files-header">
+                        <h2>Your Files ({files.length})</h2>
+                        {selectionMode && (
+                            <div className="selection-controls">
+                                <button 
+                                    className="btn btn-sm btn-outline"
+                                    onClick={handleSelectAll}
+                                >
+                                    {selectedFiles.length === files.length ? 'Deselect All' : 'Select All'}
+                                </button>
+                                <span className="selection-count">
+                                    {selectedFiles.length} selected
+                                </span>
+                                {selectedFiles.length > 0 && (
+                                    <button 
+                                        className="btn btn-sm btn-primary"
+                                        onClick={handleBulkOperation}
+                                    >
+                                        📦 Bulk Actions
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
                     
                     {loading ? (
                         <div className="loading-state">
@@ -218,8 +306,17 @@ const Dashboard = () => {
                     ) : (
                         <div className="files-grid">
                             {files.map((file) => (
-                                <div key={file.id} className="file-card">
+                                <div key={file.id} className={`file-card ${selectionMode ? 'selectable' : ''} ${selectedFiles.find(f => f.id === file.id) ? 'selected' : ''}`}>
                                     <div className="file-header">
+                                        {selectionMode && (
+                                            <div className="file-checkbox">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedFiles.find(f => f.id === file.id) !== undefined}
+                                                    onChange={() => handleFileSelect(file)}
+                                                />
+                                            </div>
+                                        )}
                                         <div className="file-icon">
                                             {file.mimeType?.startsWith('image/') ? '🖼️' :
                                              file.mimeType?.startsWith('video/') ? '🎥' :
@@ -286,6 +383,26 @@ const Dashboard = () => {
                 isOpen={shareModal.isOpen}
                 onClose={closeShareModal}
             />
+
+            {showBulkOperations && (
+                <BulkOperations 
+                    selectedFiles={selectedFiles}
+                    onComplete={handleBulkComplete}
+                    onCancel={() => setShowBulkOperations(false)}
+                />
+            )}
+
+            {showUserSettings && (
+                <UserSettings 
+                    onClose={() => setShowUserSettings(false)}
+                />
+            )}
+
+            {showAdminPanel && (
+                <AdminPanel 
+                    onClose={() => setShowAdminPanel(false)}
+                />
+            )}
         </div>
     );
 };

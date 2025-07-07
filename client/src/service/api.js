@@ -224,6 +224,26 @@ export const adminAPI = {
     getAllUsers: async () => {
         const response = await api.get('/admin/users');
         return response.data;
+    },
+    
+    updateUserRole: async (userId, role) => {
+        const response = await api.put(`/admin/users/${userId}/role`, { role });
+        return response.data;
+    },
+    
+    updateUserStatus: async (userId, status) => {
+        const response = await api.put(`/admin/users/${userId}/status`, { status });
+        return response.data;
+    },
+    
+    getSystemStats: async () => {
+        const response = await api.get('/admin/stats');
+        return response.data;
+    },
+    
+    getSystemActivity: async (limit = 50) => {
+        const response = await api.get(`/admin/activity?limit=${limit}`);
+        return response.data;
     }
 };
 
