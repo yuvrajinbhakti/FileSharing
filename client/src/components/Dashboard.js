@@ -164,6 +164,53 @@ const Dashboard = () => {
         }
     };
 
+    const handleShare = (file) => {
+        // Create a shareable link
+        const shareUrl = `${window.location.origin}/file/${file.id}`;
+        
+        // Try to use the Web Share API if available
+        if (navigator.share) {
+            navigator.share({
+                title: `Shared file: ${file.originalName}`,
+                text: `Check out this file: ${file.originalName}`,
+                url: shareUrl
+            }).catch(err => {
+                console.log('Error sharing:', err);
+                // Fallback to copying to clipboard
+                copyToClipboard(shareUrl, file.originalName);
+            });
+        } else {
+            // Fallback to copying to clipboard
+            copyToClipboard(shareUrl, file.originalName);
+        }
+    };
+
+    const copyToClipboard = (url, fileName) => {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(() => {
+                setSuccessMessage(`Share link for "${fileName}" copied to clipboard!`);
+                setTimeout(() => setSuccessMessage(null), 3000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                setError('Failed to copy share link');
+            });
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = url;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                setSuccessMessage(`Share link for "${fileName}" copied to clipboard!`);
+                setTimeout(() => setSuccessMessage(null), 3000);
+            } catch (err) {
+                setError('Failed to copy share link');
+            }
+            document.body.removeChild(textArea);
+        }
+    };
+
     const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -180,6 +227,17 @@ const Dashboard = () => {
             hour: '2-digit',
             minute: '2-digit'
         });
+    };
+
+    // Helper function to get file type category
+    const getFileTypeCategory = (mimeType) => {
+        if (mimeType.startsWith('image/')) return 'image';
+        if (mimeType.startsWith('video/')) return 'video';
+        if (mimeType.startsWith('audio/')) return 'audio';
+        if (mimeType.includes('pdf') || mimeType.includes('word') || 
+            mimeType.includes('excel') || mimeType.includes('powerpoint') ||
+            mimeType.includes('text')) return 'document';
+        return 'other';
     };
 
     const filteredFiles = files.filter(file =>
@@ -394,8 +452,8 @@ const Dashboard = () => {
                         </div>
                     ) : (
                         <div className="files-grid">
-                            {filteredFiles.map((file) => (
-                                <div key={file.id} className="file-card">
+                            {filteredFiles.map(file => (
+                                <div key={file.id} className="file-card" data-type={getFileTypeCategory(file.mimeType)}>
                                     <div className="file-header">
                                         <div className="file-icon">
                                             {file.mimeType.startsWith('image/') ? '🖼️' :
@@ -403,7 +461,10 @@ const Dashboard = () => {
                                              file.mimeType.startsWith('audio/') ? '🎵' :
                                              file.mimeType.includes('pdf') ? '📕' :
                                              file.mimeType.includes('word') ? '📄' :
-                                             file.mimeType.includes('excel') ? '📊' : '📄'}
+                                             file.mimeType.includes('excel') ? '📊' :
+                                             file.mimeType.includes('powerpoint') ? '📊' :
+                                             file.mimeType.includes('zip') || file.mimeType.includes('rar') ? '📦' :
+                                             file.mimeType.includes('text') ? '📝' : '📄'}
                                         </div>
                                         <div className="file-access-level">
                                             {file.accessLevel === 'private' ? '🔒' :
@@ -436,14 +497,24 @@ const Dashboard = () => {
                                             onClick={() => handleDownload(file.id, file.originalName)}
                                             title="Download file"
                                         >
-                                            📥
+                                            <span className="btn-icon">📥</span>
+                                            <span className="btn-text">Download</span>
                                         </button>
                                         <button
                                             className="btn btn-sm btn-danger"
                                             onClick={() => handleDelete(file.id, file.originalName)}
                                             title="Delete file"
                                         >
-                                            🗑️
+                                            <span className="btn-icon">🗑️</span>
+                                            <span className="btn-text">Delete</span>
+                                        </button>
+                                        <button
+                                            className="btn btn-sm btn-secondary"
+                                            onClick={() => handleShare(file)}
+                                            title="Share file"
+                                        >
+                                            <span className="btn-icon">📤</span>
+                                            <span className="btn-text">Share</span>
                                         </button>
                                     </div>
                                 </div>
