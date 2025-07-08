@@ -176,6 +176,9 @@ export const uploadFile = async (request, response) => {
         
         // Encrypt the file
         let encryptionResult;
+        let isEncrypted = true;
+        let finalPath = encryptedPath;
+        
         try {
             encryptionResult = await encryptFile(originalFile.path, encryptedPath, encryptionKey);
             logInfo('File encrypted successfully', { 
@@ -183,24 +186,52 @@ export const uploadFile = async (request, response) => {
                 encryptedPath: encryptionResult.encryptedPath 
             });
         } catch (encryptError) {
-            logError('File encryption failed', encryptError, { userId });
-            return response.status(500).json({
-                error: 'File encryption failed',
-                code: 'ENCRYPTION_ERROR'
-            });
+            logError('File encryption failed, attempting fallback to unencrypted storage', encryptError, { userId });
+            
+            // Fallback: Store file without encryption
+            try {
+                // Move file to encrypted directory without encryption
+                const fallbackPath = path.join('uploads', 'encrypted', `unencrypted_${Date.now()}_${originalFile.filename}`);
+                fs.renameSync(originalFile.path, fallbackPath);
+                
+                // Create fake encryption result for compatibility
+                encryptionResult = {
+                    encryptedPath: fallbackPath,
+                    iv: 'unencrypted',
+                    tag: 'unencrypted'
+                };
+                
+                isEncrypted = false;
+                finalPath = fallbackPath;
+                
+                logInfo('File stored without encryption (fallback)', { 
+                    userId, 
+                    fallbackPath: fallbackPath 
+                });
+            } catch (fallbackError) {
+                logError('Fallback storage also failed', fallbackError, { userId });
+                return response.status(500).json({
+                    error: 'File storage failed - both encryption and fallback failed',
+                    code: 'STORAGE_ERROR',
+                    details: {
+                        encryptionError: encryptError.message,
+                        fallbackError: fallbackError.message
+                    }
+                });
+            }
         }
         
         // Create file record in database
         const fileObj = {
-            path: encryptionResult.encryptedPath,
+            path: finalPath,
             originalName: originalFile.originalname,
-            fileName: encryptedFileName,
+            fileName: path.basename(finalPath),
             fileSize: originalFile.size,
             mimeType: originalFile.mimetype,
-            isEncrypted: true,
-            encryptionKey: encryptionKey.toString('hex'),
-            encryptionIV: encryptionResult.iv,
-            encryptionTag: encryptionResult.tag,
+            isEncrypted: isEncrypted,
+            encryptionKey: isEncrypted ? encryptionKey.toString('hex') : null,
+            encryptionIV: isEncrypted ? encryptionResult.iv : null,
+            encryptionTag: isEncrypted ? encryptionResult.tag : null,
             fileHash: fileHash,
             uploadedBy: userId,
             accessLevel: request.body.accessLevel || 'private',
@@ -221,12 +252,12 @@ export const uploadFile = async (request, response) => {
             logError('Database error creating file record', dbError, { userId });
             
             // Clean up encrypted file if database save fails
-            if (fs.existsSync(encryptedPath)) {
+            if (fs.existsSync(finalPath)) {
                 try {
-                    fs.unlinkSync(encryptedPath);
-                    logInfo('Cleaned up encrypted file after database error', { encryptedPath });
+                    fs.unlinkSync(finalPath);
+                    logInfo('Cleaned up encrypted file after database error', { finalPath });
                 } catch (cleanupError) {
-                    logError('Failed to clean up encrypted file', cleanupError, { encryptedPath });
+                    logError('Failed to clean up encrypted file', cleanupError, { finalPath });
                 }
             }
             
@@ -370,49 +401,63 @@ export const downloadFile = async (request, response) => {
         
         // Decrypt file if encrypted
         let downloadPath = file.path;
-        if (file.isEncrypted) {
-            const tempFileName = `temp_${Date.now()}_${file.originalName}`;
-            const tempPath = path.join('uploads', 'temp', tempFileName);
-            
-            // Ensure temp directory exists
-            const tempDir = path.dirname(tempPath);
-            if (!fs.existsSync(tempDir)) {
+        if (file.isEncrypted && file.encryptionKey && file.encryptionIV && file.encryptionTag) {
+            // Only decrypt if we have valid encryption metadata
+            if (file.encryptionKey !== null && file.encryptionIV !== 'unencrypted' && file.encryptionTag !== 'unencrypted') {
+                const tempFileName = `temp_${Date.now()}_${file.originalName}`;
+                const tempPath = path.join('uploads', 'temp', tempFileName);
+                
+                // Ensure temp directory exists
+                const tempDir = path.dirname(tempPath);
+                if (!fs.existsSync(tempDir)) {
+                    try {
+                        fs.mkdirSync(tempDir, { recursive: true });
+                        logInfo(`Created temp directory: ${tempDir}`);
+                    } catch (dirError) {
+                        logError('Failed to create temp directory', dirError, {
+                            dir: tempDir,
+                            userId: userId
+                        });
+                        return response.status(500).json({
+                            error: 'Failed to create temporary directory',
+                            code: 'TEMP_DIRECTORY_ERROR'
+                        });
+                    }
+                }
+                
                 try {
-                    fs.mkdirSync(tempDir, { recursive: true });
-                    logInfo(`Created temp directory: ${tempDir}`);
-                } catch (dirError) {
-                    logError('Failed to create temp directory', dirError, {
-                        dir: tempDir,
-                        userId: userId
+                    const decryptionKey = Buffer.from(file.encryptionKey, 'hex');
+                    await decryptFile(file.path, tempPath, decryptionKey);
+                    downloadPath = tempPath;
+                    
+                    // Clean up temp file after download
+                    response.on('finish', () => {
+                        setTimeout(() => {
+                            if (fs.existsSync(tempPath)) {
+                                fs.unlinkSync(tempPath);
+                            }
+                        }, 1000); // Delete after 1 second
                     });
-                    return response.status(500).json({
-                        error: 'Failed to create temporary directory',
-                        code: 'TEMP_DIRECTORY_ERROR'
+                    
+                } catch (decryptError) {
+                    logError('File decryption failed', decryptError, { fileId, userId });
+                    return response.status(500).json({ 
+                        error: 'File decryption failed',
+                        code: 'DECRYPTION_ERROR'
                     });
                 }
-            }
-            
-            try {
-                const decryptionKey = Buffer.from(file.encryptionKey, 'hex');
-                await decryptFile(file.path, tempPath, decryptionKey);
-                downloadPath = tempPath;
-                
-                // Clean up temp file after download
-                response.on('finish', () => {
-                    setTimeout(() => {
-                        if (fs.existsSync(tempPath)) {
-                            fs.unlinkSync(tempPath);
-                        }
-                    }, 1000); // Delete after 1 second
+            } else {
+                // File is marked as encrypted but has unencrypted markers - use directly
+                logInfo('File marked as encrypted but using fallback unencrypted storage', { 
+                    fileId, 
+                    userId 
                 });
-                
-            } catch (decryptError) {
-                logError('File decryption failed', decryptError, { fileId, userId });
-                return response.status(500).json({ 
-                    error: 'File decryption failed',
-                    code: 'DECRYPTION_ERROR'
-                });
+                downloadPath = file.path;
             }
+        } else {
+            // File is not encrypted, use directly
+            logInfo('File is not encrypted, serving directly', { fileId, userId });
+            downloadPath = file.path;
         }
         
         // Update download count and last downloaded

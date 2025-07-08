@@ -391,13 +391,20 @@ router.get('/debug/upload-test', authenticateToken, async (req, res) => {
 
     // Test 4: Encryption utilities
     try {
-        const { generateKey, encryptText, decryptText } = await import('../utils/encryption.js');
-        const key = generateKey();
-        const testText = 'test encryption';
-        const encrypted = encryptText(testText, key);
-        const decrypted = decryptText(encrypted.encrypted, key, encrypted.iv, encrypted.tag);
+        const { testEncryption } = await import('../utils/encryption.js');
         
-        testResults.tests.encryption = decrypted === testText ? 'success' : 'decryption_failed';
+        // Create a test file for encryption testing
+        const testFilePath = 'test-encryption-file.txt';
+        fs.writeFileSync(testFilePath, 'This is a test file for encryption testing.');
+        
+        const encryptionResults = await testEncryption(testFilePath);
+        testResults.tests.encryption = encryptionResults.overallStatus === 'all_tests_passed' ? 'success' : 'some_tests_failed';
+        testResults.tests.encryptionDetails = encryptionResults.tests;
+        
+        // Clean up test file
+        if (fs.existsSync(testFilePath)) {
+            fs.unlinkSync(testFilePath);
+        }
     } catch (error) {
         testResults.tests.encryption = `failed: ${error.message}`;
     }
