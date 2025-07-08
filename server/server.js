@@ -105,7 +105,10 @@ const requiredDirs = [
 requiredDirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
+        console.log(`✅ Created directory: ${dir}`);
         logInfo(`Created directory: ${dir}`);
+    } else {
+        console.log(`✅ Directory exists: ${dir}`);
     }
 });
 

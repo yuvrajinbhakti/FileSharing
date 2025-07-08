@@ -9,7 +9,15 @@ dotenv.config();
 
 export const uploadFile = async (request, response) => {
     try {
+        // Detailed logging for debugging
+        console.log('Upload request received:', {
+            hasFile: !!request.file,
+            user: request.user?.id,
+            body: request.body
+        });
+
         if (!request.file) {
+            console.log('No file in request');
             return response.status(400).json({ 
                 error: 'No file uploaded',
                 code: 'NO_FILE'
@@ -18,6 +26,13 @@ export const uploadFile = async (request, response) => {
 
         const userId = request.user.id;
         const originalFile = request.file;
+        
+        console.log('File details:', {
+            originalname: originalFile.originalname,
+            mimetype: originalFile.mimetype,
+            size: originalFile.size,
+            path: originalFile.path
+        });
         
         // Generate encryption key
         const encryptionKey = generateKey();
@@ -82,15 +97,38 @@ export const uploadFile = async (request, response) => {
         });
         
     } catch (error) {
+        console.error('Upload error details:', {
+            message: error.message,
+            stack: error.stack,
+            userId: request.user?.id,
+            fileName: request.file?.originalname
+        });
+        
         logError('File upload error', error, { 
             userId: request.user?.id, 
             ip: request.ip,
             fileName: request.file?.originalname 
         });
         
+        // Provide more specific error information
+        let errorMessage = 'File upload failed';
+        let errorCode = 'UPLOAD_ERROR';
+        
+        if (error.message.includes('ENOENT')) {
+            errorMessage = 'Upload directory not found';
+            errorCode = 'DIRECTORY_ERROR';
+        } else if (error.message.includes('EACCES')) {
+            errorMessage = 'Permission denied for file upload';
+            errorCode = 'PERMISSION_ERROR';
+        } else if (error.message.includes('EMFILE') || error.message.includes('ENFILE')) {
+            errorMessage = 'Too many files open';
+            errorCode = 'FILE_LIMIT_ERROR';
+        }
+        
         response.status(500).json({ 
-            error: 'File upload failed',
-            code: 'UPLOAD_ERROR'
+            error: errorMessage,
+            code: errorCode,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
