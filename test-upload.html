@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .progress {
+            margin-top: 10px;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #007bff;
+            transition: width 0.3s ease;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .debug {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>File Upload Test</h1>
+        <p>This page tests the file upload functionality directly.</p>
+
+        <div class="form-group">
+            <label for="server-url">Server URL:</label>
+            <input type="text" id="server-url" value="https://filesharing-bpmy.onrender.com/api"
+                placeholder="Enter server URL">
+        </div>
+
+        <div class="form-group">
+            <label for="token">JWT Token:</label>
+            <textarea id="token"
+                placeholder="Paste your JWT token here (get from browser developer tools > Application > localStorage > access_token)"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="file">Select File:</label>
+            <input type="file" id="file">
+        </div>
+
+        <div class="form-group">
+            <label for="access-level">Access Level:</label>
+            <select id="access-level">
+                <option value="private">Private</option>
+                <option value="public">Public</option>
+                <option value="restricted">Restricted</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description:</label>
+            <textarea id="description" placeholder="Optional description"></textarea>
+        </div>
+
+        <button onclick="testUpload()">Test Upload</button>
+        <button onclick="testHealthCheck()">Test Health Check</button>
+        <button onclick="testDebugEndpoint()">Test Debug Endpoint</button>
+
+        <div class="progress" id="progress" style="display: none;">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <div id="result"></div>
+        <div id="debug" class="debug"></div>
+    </div>
+
+    <script>
+        function showResult(message, type = 'success') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = message;
+            resultDiv.style.display = 'block';
+        }
+
+        function showDebug(message) {
+            const debugDiv = document.getElementById('debug');
+            debugDiv.textContent = message;
+            debugDiv.style.display = 'block';
+        }
+
+        function updateProgress(percentage) {
+            const progressDiv = document.getElementById('progress');
+            const progressBar = document.getElementById('progress-bar');
+
+            if (percentage > 0) {
+                progressDiv.style.display = 'block';
+                progressBar.style.width = percentage + '%';
+            } else {
+                progressDiv.style.display = 'none';
+            }
+        }
+
+        async function testHealthCheck() {
+            const serverUrl = document.getElementById('server-url').value;
+            const token = document.getElementById('token').value;
+
+            try {
+                showDebug('Testing health check...');
+
+                const response = await fetch(`${serverUrl}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': token ? `Bearer ${token}` : '',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                showResult(`Health check: ${response.ok ? 'PASSED' : 'FAILED'}`, response.ok ? 'success' : 'error');
+                showDebug(JSON.stringify(data, null, 2));
+            } catch (error) {
+                showResult(`Health check failed: ${error.message}`, 'error');
+                showDebug(error.stack);
+            }
+        }
+
+        async function testDebugEndpoint() {
+            const serverUrl = document.getElementById('server-url').value;
+            const token = document.getElementById('token').value;
+
+            if (!token) {
+                showResult('JWT token is required for debug endpoint', 'error');
+                return;
+            }
+
+            try {
+                showDebug('Testing debug endpoint...');
+
+                const response = await fetch(`${serverUrl}/debug/upload-test`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                showResult(`Debug test: ${response.ok ? 'PASSED' : 'FAILED'}`, response.ok ? 'success' : 'error');
+                showDebug(JSON.stringify(data, null, 2));
+            } catch (error) {
+                showResult(`Debug test failed: ${error.message}`, 'error');
+                showDebug(error.stack);
+            }
+        }
+
+        async function testUpload() {
+            const serverUrl = document.getElementById('server-url').value;
+            const token = document.getElementById('token').value;
+            const fileInput = document.getElementById('file');
+            const accessLevel = document.getElementById('access-level').value;
+            const description = document.getElementById('description').value;
+
+            if (!token) {
+                showResult('JWT token is required', 'error');
+                return;
+            }
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showResult('Please select a file', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+
+            try {
+                showDebug(`Starting upload test...
+File: ${file.name} (${file.size} bytes, ${file.type})
+Server: ${serverUrl}
+Token: ${token.substring(0, 20)}...`);
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('accessLevel', accessLevel);
+                formData.append('description', description);
+
+                const xhr = new XMLHttpRequest();
+
+                // Progress tracking
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentage = Math.round((e.loaded * 100) / e.total);
+                        updateProgress(percentage);
+                    }
+                });
+
+                // Response handling
+                xhr.onload = function () {
+                    updateProgress(0);
+
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        showResult('Upload successful!', 'success');
+                        showDebug(`Response: ${xhr.responseText}`);
+                    } else {
+                        showResult(`Upload failed: HTTP ${xhr.status}`, 'error');
+                        showDebug(`Error Response: ${xhr.responseText}`);
+                    }
+                };
+
+                xhr.onerror = function () {
+                    updateProgress(0);
+                    showResult('Upload failed: Network error', 'error');
+                    showDebug('Network error occurred');
+                };
+
+                // Send request
+                xhr.open('POST', `${serverUrl}/upload`);
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.send(formData);
+
+            } catch (error) {
+                updateProgress(0);
+                showResult(`Upload failed: ${error.message}`, 'error');
+                showDebug(error.stack);
+            }
+        }
+    </script>
+</body>
+
+</html>

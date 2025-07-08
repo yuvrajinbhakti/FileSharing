@@ -157,13 +157,53 @@ export const authAPI = {
 // File API
 export const fileAPI = {
     upload: async (formData, onUploadProgress) => {
-        const response = await api.post('/upload', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-            onUploadProgress
-        });
-        return response.data;
+        try {
+            // Add debugging information
+            console.log('Starting file upload...');
+            console.log('FormData contents:');
+            for (let [key, value] of formData.entries()) {
+                if (value instanceof File) {
+                    console.log(`${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+                } else {
+                    console.log(`${key}: ${value}`);
+                }
+            }
+
+            const response = await api.post('/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+                onUploadProgress,
+                timeout: 60000 // Increase timeout to 60 seconds
+            });
+            
+            console.log('Upload successful:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Upload error details:', {
+                message: error.message,
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                config: {
+                    url: error.config?.url,
+                    method: error.config?.method,
+                    headers: error.config?.headers,
+                    baseURL: error.config?.baseURL
+                }
+            });
+            
+            // Re-throw with enhanced error information
+            const enhancedError = new Error(
+                error.response?.data?.error || 
+                error.message || 
+                'Upload failed'
+            );
+            enhancedError.originalError = error;
+            enhancedError.status = error.response?.status;
+            enhancedError.code = error.response?.data?.code;
+            throw enhancedError;
+        }
     },
     
     getUserFiles: async (page = 1, limit = 10) => {

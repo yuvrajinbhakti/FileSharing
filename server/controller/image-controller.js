@@ -30,18 +30,39 @@ const ensureDirectoriesExist = () => {
 
 export const uploadFile = async (request, response) => {
     try {
-        // Ensure directories exist before processing upload
-        ensureDirectoriesExist();
-        
-        // Detailed logging for debugging
+        // Add detailed request logging
         logInfo('Upload request received', {
             hasFile: !!request.file,
-            user: request.user?.id,
-            body: request.body,
+            userId: request.user?.id,
+            userRole: request.user?.role,
             contentType: request.get('Content-Type'),
+            contentLength: request.get('Content-Length'),
+            body: request.body,
+            ip: request.ip,
             userAgent: request.get('User-Agent')
         });
 
+        // Check if user is authenticated
+        if (!request.user || !request.user.id) {
+            logError('Upload request without authenticated user', new Error('User not authenticated'));
+            return response.status(401).json({
+                error: 'User not authenticated',
+                code: 'NOT_AUTHENTICATED'
+            });
+        }
+
+        // Ensure directories exist before processing upload
+        try {
+            ensureDirectoriesExist();
+        } catch (dirError) {
+            logError('Failed to create required directories', dirError);
+            return response.status(500).json({
+                error: 'Server configuration error - unable to create upload directories',
+                code: 'DIRECTORY_CREATION_ERROR'
+            });
+        }
+
+        // Check if file was uploaded
         if (!request.file) {
             logError('No file in upload request', new Error('No file uploaded'), {
                 userId: request.user?.id,
@@ -61,7 +82,9 @@ export const uploadFile = async (request, response) => {
             mimetype: originalFile.mimetype,
             size: originalFile.size,
             path: originalFile.path,
-            userId: userId
+            userId: userId,
+            fieldname: originalFile.fieldname,
+            filename: originalFile.filename
         });
         
         // Validate file exists on disk
@@ -71,13 +94,50 @@ export const uploadFile = async (request, response) => {
                 userId: userId
             });
             return response.status(400).json({
-                error: 'File upload failed - file not found',
+                error: 'File upload failed - file not found on disk',
                 code: 'FILE_NOT_FOUND'
+            });
+        }
+
+        // Validate file size
+        if (originalFile.size === 0) {
+            logError('Empty file uploaded', new Error('Empty file'), {
+                userId: userId,
+                filename: originalFile.originalname
+            });
+            return response.status(400).json({
+                error: 'Cannot upload empty file',
+                code: 'EMPTY_FILE'
+            });
+        }
+
+        // Check file size limit (100MB)
+        const maxFileSize = 100 * 1024 * 1024; // 100MB
+        if (originalFile.size > maxFileSize) {
+            logError('File too large', new Error('File size exceeds limit'), {
+                userId: userId,
+                filename: originalFile.originalname,
+                size: originalFile.size,
+                maxSize: maxFileSize
+            });
+            return response.status(400).json({
+                error: 'File too large. Maximum size is 100MB',
+                code: 'FILE_TOO_LARGE'
             });
         }
         
         // Generate encryption key
-        const encryptionKey = generateKey();
+        let encryptionKey;
+        try {
+            encryptionKey = generateKey();
+            logInfo('Encryption key generated successfully', { userId });
+        } catch (keyError) {
+            logError('Failed to generate encryption key', keyError, { userId });
+            return response.status(500).json({
+                error: 'Encryption key generation failed',
+                code: 'ENCRYPTION_KEY_ERROR'
+            });
+        }
         
         // Create encrypted file path
         const encryptedFileName = `encrypted_${Date.now()}_${originalFile.filename}`;
@@ -102,10 +162,33 @@ export const uploadFile = async (request, response) => {
         }
         
         // Generate file hash before encryption
-        const fileHash = await generateFileHash(originalFile.path);
+        let fileHash;
+        try {
+            fileHash = await generateFileHash(originalFile.path);
+            logInfo('File hash generated successfully', { userId, fileHash });
+        } catch (hashError) {
+            logError('Failed to generate file hash', hashError, { userId });
+            return response.status(500).json({
+                error: 'File hash generation failed',
+                code: 'FILE_HASH_ERROR'
+            });
+        }
         
         // Encrypt the file
-        const encryptionResult = await encryptFile(originalFile.path, encryptedPath, encryptionKey);
+        let encryptionResult;
+        try {
+            encryptionResult = await encryptFile(originalFile.path, encryptedPath, encryptionKey);
+            logInfo('File encrypted successfully', { 
+                userId, 
+                encryptedPath: encryptionResult.encryptedPath 
+            });
+        } catch (encryptError) {
+            logError('File encryption failed', encryptError, { userId });
+            return response.status(500).json({
+                error: 'File encryption failed',
+                code: 'ENCRYPTION_ERROR'
+            });
+        }
         
         // Create file record in database
         const fileObj = {
@@ -126,19 +209,49 @@ export const uploadFile = async (request, response) => {
             tags: request.body.tags ? request.body.tags.split(',').map(tag => tag.trim()) : []
         };
         
-        const file = await File.create(fileObj);
+        let file;
+        try {
+            file = await File.create(fileObj);
+            logInfo('File record created in database', { 
+                userId, 
+                fileId: file._id,
+                originalName: file.originalName 
+            });
+        } catch (dbError) {
+            logError('Database error creating file record', dbError, { userId });
+            
+            // Clean up encrypted file if database save fails
+            if (fs.existsSync(encryptedPath)) {
+                try {
+                    fs.unlinkSync(encryptedPath);
+                    logInfo('Cleaned up encrypted file after database error', { encryptedPath });
+                } catch (cleanupError) {
+                    logError('Failed to clean up encrypted file', cleanupError, { encryptedPath });
+                }
+            }
+            
+            return response.status(500).json({
+                error: 'Database error saving file record',
+                code: 'DATABASE_ERROR'
+            });
+        }
         
         // Log the upload
-        auditLog.fileUpload(
-            userId, 
-            request.user.username, 
-            file._id, 
-            originalFile.originalname, 
-            originalFile.size, 
-            request.ip
-        );
+        try {
+            auditLog.fileUpload(
+                userId, 
+                request.user.username, 
+                file._id, 
+                originalFile.originalname, 
+                originalFile.size, 
+                request.ip
+            );
+        } catch (auditError) {
+            logError('Audit log error', auditError, { userId, fileId: file._id });
+            // Don't fail the upload for audit log errors
+        }
         
-        logInfo('File upload successful', {
+        logInfo('File upload completed successfully', {
             fileId: file._id,
             originalName: file.originalName,
             userId: userId,
@@ -158,7 +271,7 @@ export const uploadFile = async (request, response) => {
         });
         
     } catch (error) {
-        logError('File upload error', error, {
+        logError('Unexpected error in file upload', error, {
             message: error.message,
             stack: error.stack,
             userId: request.user?.id,
@@ -194,12 +307,18 @@ export const uploadFile = async (request, response) => {
         } else if (error.message.includes('ENOSPC')) {
             errorMessage = 'No space left on device';
             errorCode = 'DISK_SPACE_ERROR';
-        } else if (error.message.includes('connection')) {
+        } else if (error.message.includes('connection') || error.message.includes('database')) {
             errorMessage = 'Database connection error';
             errorCode = 'DATABASE_ERROR';
         } else if (error.message.includes('encryption')) {
             errorMessage = 'File encryption failed';
             errorCode = 'ENCRYPTION_ERROR';
+        } else if (error.message.includes('ValidationError')) {
+            errorMessage = 'File validation failed';
+            errorCode = 'VALIDATION_ERROR';
+        } else if (error.message.includes('MongoError') || error.message.includes('BulkWriteError')) {
+            errorMessage = 'Database operation failed';
+            errorCode = 'DATABASE_ERROR';
         }
         
         response.status(500).json({ 
