@@ -103,12 +103,18 @@ const requiredDirs = [
 ];
 
 requiredDirs.forEach(dir => {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-        console.log(`✅ Created directory: ${dir}`);
-        logInfo(`Created directory: ${dir}`);
-    } else {
-        console.log(`✅ Directory exists: ${dir}`);
+    try {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+            console.log(`✅ Created directory: ${dir}`);
+            logInfo(`Created directory: ${dir}`);
+        } else {
+            console.log(`✅ Directory exists: ${dir}`);
+        }
+    } catch (error) {
+        console.warn(`⚠️  Could not create directory ${dir}:`, error.message);
+        logError(`Failed to create directory ${dir}`, error);
+        // Don't exit on directory creation failure - directories will be created on demand
     }
 });
 

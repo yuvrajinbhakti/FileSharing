@@ -1,23 +1,52 @@
 import File from '../models/file.js';
 import { encryptFile, decryptFile, generateKey, generateFileHash } from '../utils/encryption.js';
-import { auditLog, logError } from '../utils/logger.js';
+import { auditLog, logError, logInfo } from '../utils/logger.js';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Helper function to ensure directories exist
+const ensureDirectoriesExist = () => {
+    const requiredDirs = [
+        'uploads',
+        'uploads/encrypted',
+        'uploads/temp',
+        'logs'
+    ];
+    
+    requiredDirs.forEach(dir => {
+        try {
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+                logInfo(`Created directory: ${dir}`);
+            }
+        } catch (error) {
+            logError(`Failed to create directory ${dir}`, error);
+        }
+    });
+};
+
 export const uploadFile = async (request, response) => {
     try {
+        // Ensure directories exist before processing upload
+        ensureDirectoriesExist();
+        
         // Detailed logging for debugging
-        console.log('Upload request received:', {
+        logInfo('Upload request received', {
             hasFile: !!request.file,
             user: request.user?.id,
-            body: request.body
+            body: request.body,
+            contentType: request.get('Content-Type'),
+            userAgent: request.get('User-Agent')
         });
 
         if (!request.file) {
-            console.log('No file in request');
+            logError('No file in upload request', new Error('No file uploaded'), {
+                userId: request.user?.id,
+                ip: request.ip
+            });
             return response.status(400).json({ 
                 error: 'No file uploaded',
                 code: 'NO_FILE'
@@ -27,12 +56,25 @@ export const uploadFile = async (request, response) => {
         const userId = request.user.id;
         const originalFile = request.file;
         
-        console.log('File details:', {
+        logInfo('Processing file upload', {
             originalname: originalFile.originalname,
             mimetype: originalFile.mimetype,
             size: originalFile.size,
-            path: originalFile.path
+            path: originalFile.path,
+            userId: userId
         });
+        
+        // Validate file exists on disk
+        if (!fs.existsSync(originalFile.path)) {
+            logError('Uploaded file not found on disk', new Error('File not found'), {
+                filePath: originalFile.path,
+                userId: userId
+            });
+            return response.status(400).json({
+                error: 'File upload failed - file not found',
+                code: 'FILE_NOT_FOUND'
+            });
+        }
         
         // Generate encryption key
         const encryptionKey = generateKey();
@@ -41,10 +83,22 @@ export const uploadFile = async (request, response) => {
         const encryptedFileName = `encrypted_${Date.now()}_${originalFile.filename}`;
         const encryptedPath = path.join('uploads', 'encrypted', encryptedFileName);
         
-        // Ensure encrypted directory exists
+        // Ensure encrypted directory exists (double check)
         const encryptedDir = path.dirname(encryptedPath);
         if (!fs.existsSync(encryptedDir)) {
-            fs.mkdirSync(encryptedDir, { recursive: true });
+            try {
+                fs.mkdirSync(encryptedDir, { recursive: true });
+                logInfo(`Created encrypted directory: ${encryptedDir}`);
+            } catch (dirError) {
+                logError('Failed to create encrypted directory', dirError, {
+                    dir: encryptedDir,
+                    userId: userId
+                });
+                return response.status(500).json({
+                    error: 'Failed to create upload directory',
+                    code: 'DIRECTORY_ERROR'
+                });
+            }
         }
         
         // Generate file hash before encryption
@@ -84,6 +138,13 @@ export const uploadFile = async (request, response) => {
             request.ip
         );
         
+        logInfo('File upload successful', {
+            fileId: file._id,
+            originalName: file.originalName,
+            userId: userId,
+            fileSize: file.fileSize
+        });
+        
         response.status(200).json({ 
             message: 'File uploaded successfully',
             file: {
@@ -97,18 +158,25 @@ export const uploadFile = async (request, response) => {
         });
         
     } catch (error) {
-        console.error('Upload error details:', {
+        logError('File upload error', error, {
             message: error.message,
             stack: error.stack,
             userId: request.user?.id,
-            fileName: request.file?.originalname
+            fileName: request.file?.originalname,
+            filePath: request.file?.path,
+            ip: request.ip,
+            userAgent: request.get('User-Agent')
         });
         
-        logError('File upload error', error, { 
-            userId: request.user?.id, 
-            ip: request.ip,
-            fileName: request.file?.originalname 
-        });
+        // Clean up any temporary files
+        if (request.file?.path && fs.existsSync(request.file.path)) {
+            try {
+                fs.unlinkSync(request.file.path);
+                logInfo('Cleaned up temporary file after error', { path: request.file.path });
+            } catch (cleanupError) {
+                logError('Failed to clean up temporary file', cleanupError, { path: request.file.path });
+            }
+        }
         
         // Provide more specific error information
         let errorMessage = 'File upload failed';
@@ -123,6 +191,15 @@ export const uploadFile = async (request, response) => {
         } else if (error.message.includes('EMFILE') || error.message.includes('ENFILE')) {
             errorMessage = 'Too many files open';
             errorCode = 'FILE_LIMIT_ERROR';
+        } else if (error.message.includes('ENOSPC')) {
+            errorMessage = 'No space left on device';
+            errorCode = 'DISK_SPACE_ERROR';
+        } else if (error.message.includes('connection')) {
+            errorMessage = 'Database connection error';
+            errorCode = 'DATABASE_ERROR';
+        } else if (error.message.includes('encryption')) {
+            errorMessage = 'File encryption failed';
+            errorCode = 'ENCRYPTION_ERROR';
         }
         
         response.status(500).json({ 
@@ -181,7 +258,19 @@ export const downloadFile = async (request, response) => {
             // Ensure temp directory exists
             const tempDir = path.dirname(tempPath);
             if (!fs.existsSync(tempDir)) {
-                fs.mkdirSync(tempDir, { recursive: true });
+                try {
+                    fs.mkdirSync(tempDir, { recursive: true });
+                    logInfo(`Created temp directory: ${tempDir}`);
+                } catch (dirError) {
+                    logError('Failed to create temp directory', dirError, {
+                        dir: tempDir,
+                        userId: userId
+                    });
+                    return response.status(500).json({
+                        error: 'Failed to create temporary directory',
+                        code: 'TEMP_DIRECTORY_ERROR'
+                    });
+                }
             }
             
             try {

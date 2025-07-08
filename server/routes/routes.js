@@ -56,8 +56,40 @@ router.post('/auth/refresh', refreshToken);
 router.post('/auth/logout', authenticateToken, logout);
 router.get('/auth/profile', authenticateToken, getProfile);
 
+// Multer error handling wrapper
+const handleMulterError = (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            console.error('Multer error:', err);
+            
+            let errorMessage = 'File upload failed';
+            let errorCode = 'UPLOAD_ERROR';
+            
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                errorMessage = 'File too large. Maximum size is 100MB';
+                errorCode = 'FILE_TOO_LARGE';
+            } else if (err.code === 'LIMIT_FILE_COUNT') {
+                errorMessage = 'Too many files. Only 1 file allowed per upload';
+                errorCode = 'TOO_MANY_FILES';
+            } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+                errorMessage = 'Unexpected file field name';
+                errorCode = 'UNEXPECTED_FILE';
+            } else if (err.code === 'ENOENT') {
+                errorMessage = 'Upload directory not found';
+                errorCode = 'DIRECTORY_ERROR';
+            }
+            
+            return res.status(400).json({
+                error: errorMessage,
+                code: errorCode
+            });
+        }
+        next();
+    });
+};
+
 // File management routes (require authentication)
-router.post('/upload', authenticateToken, uploadLimiter, rateLimitPerUser(), upload.single('file'), uploadFile);
+router.post('/upload', authenticateToken, uploadLimiter, rateLimitPerUser(), handleMulterError, uploadFile);
 router.get('/files', authenticateToken, getUserFiles);
 router.delete('/file/:fileId', authenticateToken, verifyFileOwnership, deleteFile);
 
@@ -124,10 +156,27 @@ router.get('/image/:fileId', optionalAuth, getImage);
 
 // Health check
 router.get('/health', (req, res) => {
+    // Check directory structure
+    const requiredDirs = ['uploads', 'uploads/encrypted', 'uploads/temp', 'logs'];
+    const directoryStatus = {};
+    
+    requiredDirs.forEach(dir => {
+        try {
+            const exists = require('fs').existsSync(dir);
+            directoryStatus[dir] = exists ? 'exists' : 'missing';
+        } catch (error) {
+            directoryStatus[dir] = `error: ${error.message}`;
+        }
+    });
+    
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        service: 'SecureShare API'
+        service: 'SecureShare API',
+        version: '1.0.0',
+        directories: directoryStatus,
+        uptime: process.uptime(),
+        memory: process.memoryUsage()
     });
 });
 
