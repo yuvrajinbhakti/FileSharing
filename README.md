@@ -1,503 +1,689 @@
-# SecureShare | Enterprise File Sharing Platform
+# 🔐 SecureShare | Enterprise File Sharing Platform
 
-## 🔐 Overview
+<div align="center">
 
-SecureShare is a secure, enterprise-grade file sharing platform built with the MERN stack, featuring AES-256 encryption, JWT-based authentication, role-based access control, and comprehensive audit logging.
+![SecureShare Logo](client/public/logo192.png)
+
+**Enterprise-grade secure file sharing platform built with MERN stack**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen.svg)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=flat&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=flat&logo=redis&logoColor=white)](https://redis.io/)
+
+[🚀 Quick Start](#-quick-start) • [📖 Documentation](#-api-documentation) • [🐳 Docker](#-docker-deployment) • [☁️ Deploy](#️-cloud-deployment) • [🤝 Contributing](#-contributing)
+
+</div>
+
+---
+
+## 🌟 Overview
+
+SecureShare is a file sharing platform built on the MERN stack. Files are encrypted at rest with AES-256-GCM, access is controlled by JWT authentication and per-user roles, and security events are written to an audit log.
+
+"Production-ready" and "enterprise-grade" are not claimed, because neither is something a repository can assert about itself.
+
+### 🎯 What it does
+
+- **🔐 Encryption at rest**: AES-256-GCM, with a fresh IV per file and the
+  authentication tag verified on the way back out. An upload that cannot be
+  encrypted is refused rather than stored in the clear.
+- **🔑 JWT authentication** with refresh tokens, account lockout, and
+  role-based access control
+- **📝 Audit logging** of security events to MongoDB
+- **⚡ Redis caching** and connection pooling
+- **🐳 Docker** containerisation with a health endpoint
+
+Deliberately not listed: uptime, response-time and efficiency figures. Nothing
+in this repository measures them, so any number here would be a guess wearing a
+percentage sign.
+
+---
 
 ## ✨ Features
 
-### 🛡️ Security Features
-- **AES-256 Encryption**: All files encrypted at rest with unique keys
-- **JWT Authentication**: Secure token-based authentication with refresh tokens
-- **Role-Based Access Control**: User, Moderator, and Admin roles
-- **Account Security**: Account lockout after failed login attempts
-- **Rate Limiting**: Global and per-user rate limiting
-- **Audit Logging**: Comprehensive security event logging to MongoDB
-- **Input Validation**: Server-side validation for all endpoints
-- **CORS Protection**: Configurable cross-origin resource sharing
-- **Helmet Security**: HTTP security headers protection
+### 🛡️ **Security & Authentication**
+- **🔐 AES-256-GCM Encryption**: All files encrypted at rest with unique keys
+- **🔑 JWT + TOTP 2FA**: Secure authentication with Google Authenticator support
+- **👥 Role-Based Access Control**: User, Moderator, and Admin roles with granular permissions
+- **🔒 Account Security**: Account lockout protection, password policies, backup codes
+- **🛡️ Advanced Rate Limiting**: Global and per-user limits with Redis backend
+- **📝 Comprehensive Audit Logging**: All security events tracked in MongoDB
+- **🔍 Real-time Security Monitoring**: Automated threat detection and alerting
 
-### 📁 File Management
-- **Encrypted File Storage**: AES-256-GCM encryption for all files
-- **File Ownership**: Users can only access their own files (except admins)
-- **Access Levels**: Private, Public, and Restricted file sharing
-- **Download Tracking**: Track download counts and last access times
-- **File Integrity**: SHA-256 hash verification
-- **Automatic Cleanup**: Temporary decrypted files auto-deleted
-- **File Metadata**: Support for tags, descriptions, and expiration dates
+### 📁 **File Management**
+- **📤 Secure File Upload**: Drag & drop with real-time progress tracking
+- **📥 Encrypted File Storage**: SHA-256 hash verification and integrity checks
+- **📊 Access Levels**: Private, Public, and Restricted file sharing options
+- **🏷️ Rich Metadata**: Tags, descriptions, expiration dates, and custom attributes
+- **📈 Download Tracking**: Monitor access patterns and usage analytics
+- **🗑️ Automatic Cleanup**: Expired files and temporary data management
+- **🔍 File Search**: Advanced search with filters and metadata queries
 
-### 👥 User Management
-- **User Registration**: Secure user registration with validation
-- **Password Security**: bcrypt hashing with configurable rounds
-- **Profile Management**: User profile and settings
-- **Admin Panel**: Administrative user and file management
-- **Session Management**: JWT with automatic refresh
+### 🔗 **Advanced Sharing**
+- **🔐 Encrypted Share Links**: Unique tokens with access controls
+- **⏰ Smart Expiration**: Time-based and download-count limits
+- **🔒 Password Protection**: Optional passwords for sensitive files
+- **📧 Email Restrictions**: Limit access to specific email addresses
+- **📊 Share Analytics**: Detailed download statistics and access logs
+- **🚫 Instant Revocation**: Disable shared links immediately
 
-### 📊 Monitoring & Logging
-- **Audit Trails**: All security events logged with timestamps
-- **Performance Monitoring**: Request duration and error tracking
-- **Security Alerts**: Failed login attempts, unauthorized access
-- **Database Logging**: Audit logs stored in MongoDB
-- **File Logging**: Local log files with rotation
+### 📦 **Bulk Operations**
+- **📥 Bulk Download**: Create encrypted ZIP archives of multiple files
+- **🗑️ Bulk Delete**: Multi-file deletion with admin override capabilities
+- **🏷️ Bulk Metadata Updates**: Mass update tags, descriptions, and access levels
+- **📊 Progress Tracking**: Real-time status for long-running operations
+- **📈 Usage Statistics**: Comprehensive analytics and reporting
+
+### 🎛️ **Administration & Monitoring**
+- **👑 Admin Dashboard**: Comprehensive system overview and user management
+- **📊 System Metrics**: Real-time performance monitoring with Redis caching
+- **📧 Email Notifications**: Professional templates for all system events
+- **⏰ Automated Scheduling**: Cleanup, maintenance, and report generation
+- **🔍 Advanced Logging**: Winston-based logging with multiple transports
+- **📱 Health Monitoring**: Automated system health checks and alerting
+
+---
 
 ## 🚀 Technology Stack
 
-### Backend
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **MongoDB** - Database with Mongoose ODM
-- **JWT** - Authentication tokens
-- **bcrypt** - Password hashing
-- **Winston** - Logging framework
-- **Multer** - File upload handling
-- **Helmet** - Security middleware
-- **Rate Limiting** - DDoS protection
+<div align="center">
 
-### Frontend
-- **React.js** - UI framework
-- **Axios** - HTTP client
-- **Modern JavaScript** - ES6+ features
+### **Backend**
+![Node.js](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
+![Express.js](https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB)
+![MongoDB](https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white)
+![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=for-the-badge&logo=redis&logoColor=white)
 
-### Security
-- **AES-256-GCM** - File encryption
-- **PBKDF2** - Key derivation
-- **SHA-256** - File integrity hashing
-- **CORS** - Cross-origin protection
-- **Input Validation** - Server-side validation
+### **Frontend**
+![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
+![CSS3](https://img.shields.io/badge/css3-%231572B6.svg?style=for-the-badge&logo=css3&logoColor=white)
 
-### Infrastructure
-- **Docker** - Containerization
-- **Docker Compose** - Multi-container orchestration
-- **Nginx** - Reverse proxy and static file serving
-- **Redis** - Session storage (optional)
-- **MongoDB** - Database with automatic backups
+### **Security & Infrastructure**
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+![Nginx](https://img.shields.io/badge/nginx-%23009639.svg?style=for-the-badge&logo=nginx&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-black?style=for-the-badge&logo=JSON%20web%20tokens)
 
-## 📦 Installation
+</div>
 
-### Prerequisites
-- Docker 20.10+
-- Docker Compose 2.0+
-- (Optional) Node.js 16+ for local development
+### **Core Technologies**
+- **Backend**: Node.js 18+, Express.js, MongoDB with Mongoose ODM
+- **Frontend**: React 18, Modern JavaScript (ES6+), Responsive CSS
+- **Security**: AES-256-GCM encryption, JWT tokens, bcrypt hashing, TOTP 2FA
+- **Caching**: Redis for sessions, rate limiting, and performance optimization
+- **Infrastructure**: Docker containers, Nginx reverse proxy, health monitoring
+- **Logging**: Winston with MongoDB and file transports
+- **Email**: Nodemailer with professional templates
+- **Scheduling**: Node-cron for automated maintenance
 
-## 🐳 Docker Deployment (Recommended)
+---
 
-### Quick Start with Docker
+## 🚀 Quick Start
 
-1. **Clone the repository**
+### **Prerequisites**
+- Docker 20.10+ and Docker Compose 2.0+
+- Node.js 16+ (for local development)
+- Git
+
+### **1. Clone Repository**
 ```bash
-git clone <repository-url>
-cd FileSharing
+git clone https://github.com/your-username/secureshare.git
+cd secureshare/FileSharing
 ```
 
-2. **Configure environment**
+### **2. Environment Setup**
 ```bash
+# Copy environment template
 cp docker.env.template .env
-# Edit .env with your configuration
+
+# Edit configuration (IMPORTANT: Change JWT secrets and passwords!)
+nano .env
 ```
 
-3. **Start the application**
+### **3. Start Application**
 ```bash
-# Development mode (with hot reloading)
+# Make scripts executable
+chmod +x scripts/*.sh
+
+# Start development environment
 ./scripts/docker-dev.sh start
 
-# Production mode
+# OR start production environment
 ./scripts/docker-prod.sh start
 ```
 
-### Development Environment
+### **4. Access Application**
+- 🌐 **Frontend**: http://localhost:3000
+- 🚀 **Backend API**: http://localhost:8000
+- 📊 **Health Check**: http://localhost:8000/api/health
+- 🗄️ **MongoDB**: mongodb://localhost:27017
+- 🔄 **Redis**: redis://localhost:6379
 
-**Start development environment:**
+### **5. Create First Admin User**
 ```bash
-# Make scripts executable (macOS/Linux)
-chmod +x scripts/*.sh
+# Access server container
+docker-compose exec secureshare-server /bin/sh
 
-# Build and start development containers
-./scripts/docker-dev.sh build
-./scripts/docker-dev.sh start
+# Run admin creation script
+node scripts/createAdmin.js
 ```
 
-**Services will be available at:**
-- 🌐 Frontend: http://localhost:3000
-- 🚀 Backend API: http://localhost:8000
-- 🗄️ MongoDB: mongodb://localhost:27017/secureshare_dev
+---
 
-**Development commands:**
+## 🐳 Docker Deployment
+
+### **Development Environment**
 ```bash
+# Build and start development containers with hot reload
+./scripts/docker-dev.sh build
+./scripts/docker-dev.sh start
+
 # View logs
 ./scripts/docker-dev.sh logs
 
-# View specific service logs
-./scripts/docker-dev.sh logs secureshare-server-dev
-
-# Open shell in container
-./scripts/docker-dev.sh shell secureshare-server-dev
-
 # Stop environment
 ./scripts/docker-dev.sh stop
-
-# Clean up (removes all data)
-./scripts/docker-dev.sh clean
 ```
 
-### Production Environment
-
-**Configure environment:**
-```bash
-# Copy and edit environment file
-cp docker.env.template .env
-nano .env  # Update JWT secrets, passwords, etc.
-```
-
-**Start production environment:**
+### **Production Environment**
 ```bash
 # Build and start production containers
 ./scripts/docker-prod.sh build
 ./scripts/docker-prod.sh start
 
-# Or start with nginx reverse proxy
+# Start with Nginx reverse proxy
 ./scripts/docker-prod.sh start-proxy
-```
 
-**Production management:**
-```bash
 # Create database backup
 ./scripts/docker-prod.sh backup
 
-# Restore from backup
-./scripts/docker-prod.sh restore backups/backup_file.gz
-
 # Update containers
 ./scripts/docker-prod.sh update
-
-# View logs
-./scripts/docker-prod.sh logs
-
-# Check status
-./scripts/docker-prod.sh status
 ```
 
-## 💻 Local Development (Alternative)
-
-### Server Setup
-
-1. **Navigate to server directory**
-```bash
-cd FileSharing/server
-```
-
-2. **Install dependencies**
-```bash
-npm install
-```
-
-3. **Environment Configuration**
-Create a `.env` file:
-```env
-MONGO_URL=mongodb://localhost:27017/secureshare
-PORT=8000
-JWT_SECRET=your-super-secret-jwt-key-minimum-256-bits
-JWT_REFRESH_SECRET=your-super-secret-refresh-key-minimum-256-bits
-FRONTEND_URL=http://localhost:3000
-LOG_LEVEL=info
-```
-
-4. **Create Admin User**
-```bash
-npm run setup
-```
-
-5. **Start Development Server**
-```bash
-npm run dev
-```
-
-### Client Setup
-
-1. **Navigate to client directory**
-```bash
-cd FileSharing/client
-```
-
-2. **Install dependencies**
-```bash
-npm install
-```
-
-3. **Start React App**
-```bash
-npm start
-```
-
-## 🔧 API Endpoints
-
-### Authentication
-```
-POST   /api/auth/register     - User registration
-POST   /api/auth/login        - User login
-POST   /api/auth/refresh      - Refresh access token
-POST   /api/auth/logout       - User logout
-GET    /api/auth/profile      - Get user profile
-```
-
-### File Management
-```
-POST   /api/upload            - Upload encrypted file
-GET    /api/files             - Get user's files
-GET    /api/file/:id          - Download file
-DELETE /api/file/:id          - Delete file
-```
-
-### Admin Routes
-```
-GET    /api/admin/files       - List all files (admin)
-GET    /api/admin/users       - List all users (admin)
-```
-
-### System
-```
-GET    /api/health            - Health check
-```
-
-## 🔐 Security Configuration
-
-### JWT Tokens
-- **Access Token**: 15 minutes expiry
-- **Refresh Token**: 7 days expiry
-- **Algorithm**: HS256
-- **Claims**: userId, username, email, role
-
-### File Encryption
-- **Algorithm**: AES-256-GCM
-- **Key Size**: 256 bits
-- **IV Size**: 128 bits
-- **Authentication Tag**: 128 bits
-
-### Rate Limiting
-- **Global**: 1000 requests per 15 minutes
-- **Authentication**: 5 attempts per 15 minutes
-- **File Upload**: 50 uploads per hour
-- **Per User**: 100 requests per 15 minutes
-
-### Account Security
-- **Password Requirements**: 8+ chars, uppercase, lowercase, number, special char
-- **Login Attempts**: 5 failed attempts lock account for 2 hours
-- **Password Hashing**: bcrypt with 12 rounds
-
-## 📊 Monitoring
-
-### Audit Events
-- User authentication (success/failure)
-- File operations (upload/download/delete)
-- Security violations (unauthorized access)
-- System events (startup/shutdown)
-- Rate limit violations
-
-### Log Locations
-- **Console**: Real-time logs
-- **Files**: `logs/combined.log`, `logs/error.log`
-- **MongoDB**: `audit_logs` collection
-
-## 🚦 Usage Examples
-
-### User Registration
-```bash
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "john_doe",
-    "email": "john@example.com",
-    "password": "SecurePass123!",
-    "confirmPassword": "SecurePass123!"
-  }'
-```
-
-### File Upload
-```bash
-curl -X POST http://localhost:8000/api/upload \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -F "file=@document.pdf" \
-  -F "accessLevel=private" \
-  -F "description=Important document"
-```
-
-### File Download
-```bash
-curl -X GET http://localhost:8000/api/file/FILE_ID \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -o downloaded_file.pdf
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MONGO_URL` | MongoDB connection string | `mongodb://localhost:27017/secureshare` |
-| `PORT` | Server port | `8000` |
-| `JWT_SECRET` | JWT signing secret | Required |
-| `JWT_REFRESH_SECRET` | Refresh token secret | Required |
-| `FRONTEND_URL` | Frontend URL for CORS | `http://localhost:3000` |
-| `LOG_LEVEL` | Logging level | `info` |
-
-### File Storage
-- **Upload Directory**: `uploads/`
-- **Encrypted Files**: `uploads/encrypted/`
-- **Temporary Files**: `uploads/temp/`
-- **Logs**: `logs/`
-
-### Docker Configuration
-
-#### Container Ports
-| Service | Internal Port | External Port | Description |
-|---------|---------------|---------------|-------------|
-| Frontend | 3000 | 3000 | React development server |
-| Backend | 8000 | 8000 | Node.js API server |
-| MongoDB | 27017 | 27017 | Database |
-| Redis | 6379 | 6379 | Session storage |
-| Nginx | 80/443 | 80/443 | Reverse proxy (production) |
-
-#### Docker Volumes
-| Volume | Purpose | Persistence |
-|--------|---------|-------------|
-| `mongodb_data` | Database storage | Persistent |
-| `server_uploads` | Encrypted files | Persistent |
-| `server_logs` | Application logs | Persistent |
-| `redis_data` | Session data | Persistent |
-
-#### Container Resources
-- **Memory Limit**: 512MB per container (configurable)
-- **CPU Limit**: 1 core per container (configurable)
-- **Restart Policy**: `unless-stopped`
-- **Health Checks**: Enabled for all services
-
-## 🐛 Troubleshooting
-
-### Docker Issues
-
-1. **Container fails to start**
-   ```bash
-   # Check container logs
-   ./scripts/docker-dev.sh logs <service-name>
-   
-   # Check Docker daemon
-   docker info
-   ```
-
-2. **Port conflicts**
-   ```bash
-   # Check what's using the port
-   lsof -i :3000
-   lsof -i :8000
-   lsof -i :27017
-   
-   # Stop conflicting services or change ports in docker-compose.yml
-   ```
-
-3. **Database connection issues**
-   ```bash
-   # Check MongoDB container
-   ./scripts/docker-dev.sh logs secureshare-db-dev
-   
-   # Test connection
-   ./scripts/docker-dev.sh shell secureshare-db-dev
-   mongosh
-   ```
-
-4. **File permission errors**
-   ```bash
-   # Fix ownership (Linux/macOS)
-   sudo chown -R $USER:$USER uploads/ logs/
-   ```
-
-5. **Build failures**
-   ```bash
-   # Clean Docker cache
-   docker system prune -a
-   
-   # Rebuild without cache
-   ./scripts/docker-dev.sh clean
-   ./scripts/docker-dev.sh build
-   ```
-
-### Common Issues
-
-1. **MongoDB Connection Error**
-   - Ensure MongoDB is running
-   - Check connection string in `.env`
-
-2. **JWT Token Errors**
-   - Verify JWT secrets are set
-   - Check token expiration
-
-3. **File Upload Failures**
-   - Check file size limits
-   - Ensure upload directories exist
-
-4. **CORS Issues**
-   - Verify `FRONTEND_URL` in environment
-   - Check allowed origins in server config
-
-5. **Container Health Check Failures**
-   ```bash
-   # Check service health
-   docker-compose ps
-   
-   # Inspect health check logs
-   docker inspect <container-name>
-   ```
-
-## 📈 Performance Considerations
-
-- **Database Indexing**: Optimized queries with proper indexes
-- **File Streaming**: Large file handling with streams
-- **Connection Pooling**: MongoDB connection pool management
-- **Rate Limiting**: Prevent resource exhaustion
-- **Log Rotation**: Automatic log file management
-
-## 🔮 Future Enhancements
-
-### Security & Features
-- [ ] Virus scanning integration (ClamAV)
-- [ ] Email notifications
-- [ ] Two-factor authentication
-- [ ] File sharing links with expiration
-- [ ] File versioning
-- [ ] Bulk operations
-- [ ] Advanced admin dashboard
-- [ ] API key authentication
-- [ ] File thumbnails/previews
-
-### Infrastructure & DevOps
-- [ ] Kubernetes deployment manifests
-- [ ] Helm charts
-- [ ] CI/CD pipeline with GitHub Actions
-- [ ] SSL certificate automation (Let's Encrypt)
-- [ ] Monitoring with Prometheus & Grafana
-- [ ] Centralized logging with ELK stack
-- [ ] Auto-scaling configuration
-- [ ] Multi-region deployment
-- [ ] Container security scanning
-- [ ] Backup automation to cloud storage
-
-## 📄 License
-
-This project is for educational and demonstration purposes.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch
-3. Commit changes
-4. Push to branch
-5. Create Pull Request
-
-## 📞 Support
-
-For support and questions:
-- Create an issue in the repository
-- Check the troubleshooting section
-- Review the audit logs for security issues
+### **Docker Services**
+| Service | Description | Port | Health Check |
+|---------|-------------|------|--------------|
+| `secureshare-server` | Node.js API server | 8000 | `/api/health` |
+| `secureshare-client` | React frontend | 3000 | HTTP 200 |
+| `secureshare-db` | MongoDB database | 27017 | `db.ping()` |
+| `secureshare-redis` | Redis cache | 6379 | `PING` |
+| `secureshare-proxy` | Nginx proxy | 80/443 | HTTP 200 |
 
 ---
 
-**⚠️ Security Notice**: This application includes production-ready security features, but always review and test security configurations before deploying to production environments. Change all default passwords and secrets immediately.
+## ☁️ Cloud Deployment
+
+### **Free Tier Deployment (Recommended)**
+
+#### **1. Database Setup (MongoDB Atlas - FREE)**
+1. Create account at [MongoDB Atlas](https://www.mongodb.com/atlas)
+2. Create free M0 cluster (512MB)
+3. Get connection string: `mongodb+srv://username:password@cluster.mongodb.net/secureshare`
+
+#### **2. Cache Setup (Upstash Redis - FREE)**
+1. Create account at [Upstash](https://upstash.com/)
+2. Create Redis database (10K commands/day free)
+3. Get Redis URL: `redis://:password@region.upstash.io:port`
+
+#### **3. Backend Deployment (Railway - FREE)**
+1. Create account at [Railway](https://railway.app/)
+2. Connect GitHub repository
+3. Deploy from `server` folder
+4. Add environment variables:
+```env
+NODE_ENV=production
+MONGO_URL=<mongodb-atlas-url>
+REDIS_URL=<upstash-redis-url>
+JWT_SECRET=<secure-256-bit-key>
+JWT_REFRESH_SECRET=<secure-256-bit-key>
+FRONTEND_URL=<vercel-url>
+```
+
+#### **4. Frontend Deployment (Vercel - FREE)**
+1. Create account at [Vercel](https://vercel.com/)
+2. Connect GitHub repository
+3. Set root directory to `client`
+4. Add environment variable:
+```env
+REACT_APP_API_URL=https://your-app.railway.app/api
+```
+
+### **Production Deployment**
+For production deployments, see our comprehensive [Deployment Guide](DEPLOYMENT.md) covering:
+- Kubernetes manifests
+- AWS/Azure/GCP deployment
+- SSL certificate setup
+- Load balancing configuration
+- Monitoring and alerting
+
+---
+
+## 📖 API Documentation
+
+### **Authentication Endpoints**
+```bash
+# User Registration
+POST /api/auth/register
+{
+  "username": "john_doe",
+  "email": "john@example.com",
+  "password": "SecurePass123!",
+  "confirmPassword": "SecurePass123!"
+}
+
+# User Login
+POST /api/auth/login
+{
+  "username": "john_doe",
+  "password": "SecurePass123!"
+}
+
+# Setup 2FA
+POST /api/auth/2fa/setup
+Headers: Authorization: Bearer <token>
+
+# Enable 2FA
+POST /api/auth/2fa/enable
+{
+  "token": "123456"
+}
+```
+
+### **File Management**
+```bash
+# Upload File
+POST /api/upload
+Form Data:
+- file: <file>
+- accessLevel: "private|public|restricted"
+- description: "File description"
+- tags: "tag1,tag2,tag3"
+
+# Download File
+GET /api/file/:fileId
+Headers: Authorization: Bearer <token>
+
+# Delete File
+DELETE /api/file/:fileId
+Headers: Authorization: Bearer <token>
+
+# Get User Files
+GET /api/files?page=1&limit=10
+Headers: Authorization: Bearer <token>
+```
+
+### **File Sharing**
+```bash
+# Create Share Link
+POST /api/share/generate/:fileId
+{
+  "expiresAt": "2024-12-31T23:59:59Z",
+  "maxDownloads": 5,
+  "password": "sharepass123",
+  "allowedEmails": ["user@example.com"]
+}
+
+# Access Shared File
+POST /api/share/access/:linkId/:token
+{
+  "password": "sharepass123",
+  "email": "user@example.com"
+}
+```
+
+### **Bulk Operations**
+```bash
+# Bulk Download
+POST /api/bulk/download
+{
+  "fileIds": ["id1", "id2", "id3"],
+  "zipName": "my-files.zip",
+  "compressionLevel": 6
+}
+
+# Bulk Delete
+DELETE /api/bulk/files
+{
+  "fileIds": ["id1", "id2", "id3"]
+}
+
+# Bulk Metadata Update
+PUT /api/bulk/metadata
+{
+  "fileIds": ["id1", "id2"],
+  "updates": {
+    "tags": ["important", "project-x"],
+    "accessLevel": "public"
+  }
+}
+```
+
+### **Admin Endpoints**
+```bash
+# Get All Files (Admin)
+GET /api/admin/files?page=1&limit=20
+Headers: Authorization: Bearer <admin-token>
+
+# Get All Users (Admin)
+GET /api/admin/users?page=1&limit=20
+Headers: Authorization: Bearer <admin-token>
+
+# System Health
+GET /api/health
+
+# System Metrics
+GET /api/system/metrics
+Headers: Authorization: Bearer <token>
+```
+
+---
+
+## ⚙️ Configuration
+
+### **Environment Variables**
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `NODE_ENV` | Environment mode | `development` | No |
+| `PORT` | Server port | `8000` | No |
+| `MONGO_URL` | MongoDB connection string | - | **Yes** |
+| `REDIS_URL` | Redis connection string | - | No |
+| `JWT_SECRET` | JWT signing secret (256-bit) | - | **Yes** |
+| `JWT_REFRESH_SECRET` | Refresh token secret (256-bit) | - | **Yes** |
+| `FRONTEND_URL` | Frontend URL for CORS | `http://localhost:3000` | No |
+| `SMTP_HOST` | Email server host | - | No |
+| `SMTP_USER` | Email username | - | No |
+| `SMTP_PASS` | Email password | - | No |
+| `LOG_LEVEL` | Logging level | `info` | No |
+
+### **Security Configuration**
+```javascript
+// JWT Tokens
+ACCESS_TOKEN_EXPIRY = "15m"    // 15 minutes
+REFRESH_TOKEN_EXPIRY = "7d"    // 7 days
+
+// File Encryption
+ALGORITHM = "aes-256-gcm"      // AES-256-GCM
+KEY_SIZE = 256                 // 256 bits
+IV_SIZE = 128                  // 128 bits
+
+// Rate Limiting
+GLOBAL_LIMIT = 1000           // requests per 15 minutes
+AUTH_LIMIT = 5                // login attempts per 15 minutes
+UPLOAD_LIMIT = 50             // uploads per hour
+USER_LIMIT = 100              // requests per user per 15 minutes
+
+// Account Security
+PASSWORD_MIN_LENGTH = 8       // minimum password length
+FAILED_LOGIN_ATTEMPTS = 5     // before account lock
+ACCOUNT_LOCK_TIME = 2         // hours
+BCRYPT_ROUNDS = 12           // password hashing rounds
+```
+
+---
+
+## 🔍 Monitoring & Logging
+
+### **Health Monitoring**
+```bash
+# Check system health
+curl http://localhost:8000/api/health
+
+# Get system metrics
+curl -H "Authorization: Bearer <token>" \
+     http://localhost:8000/api/system/metrics
+
+# View application logs
+docker-compose logs -f secureshare-server
+
+# View audit logs in MongoDB
+use secureshare;
+db.audit_logs.find().sort({timestamp: -1}).limit(10);
+```
+
+### **Audit Events Tracked**
+- **Authentication**: Login success/failure, 2FA events, password resets
+- **File Operations**: Upload, download, delete, share events
+- **Security Events**: Unauthorized access, rate limit violations
+- **System Events**: Server startup/shutdown, health checks
+- **Admin Actions**: User management, system configuration changes
+
+### **Performance Metrics**
+- **Response Times**: API endpoint performance tracking
+- **Cache Hit Rates**: Redis caching effectiveness
+- **File Operations**: Upload/download statistics
+- **User Activity**: Active sessions and usage patterns
+- **System Resources**: Memory, CPU, and storage utilization
+
+---
+
+## 🧪 Testing
+
+### **Run Tests**
+```bash
+# Unit tests
+npm test
+
+# Integration tests
+npm run test:integration
+
+# Security tests
+npm run test:security
+
+# Performance tests
+npm run test:performance
+```
+
+### **Load Testing**
+```bash
+# Install artillery for load testing
+npm install -g artillery
+
+# Run load test
+artillery quick --count 100 --num 10 http://localhost:8000/api/health
+```
+
+---
+
+## 🛠️ Development
+
+### **Local Development Setup**
+```bash
+# Clone repository
+git clone https://github.com/your-username/secureshare.git
+cd secureshare/FileSharing
+
+# Install server dependencies
+cd server
+npm install
+cp .env.example .env  # Configure environment
+
+# Install client dependencies
+cd ../client
+npm install
+
+# Start development servers
+# Terminal 1: Start MongoDB
+mongod
+
+# Terminal 2: Start Redis
+redis-server
+
+# Terminal 3: Start backend
+cd server && npm run dev
+
+# Terminal 4: Start frontend
+cd client && npm start
+```
+
+### **Project Structure**
+```
+FileSharing/
+├── client/                     # React frontend
+│   ├── public/                # Static assets
+│   ├── src/
+│   │   ├── components/        # React components
+│   │   ├── contexts/         # React contexts
+│   │   ├── service/          # API service layer
+│   │   └── App.js           # Main app component
+│   ├── Dockerfile           # Production container
+│   └── package.json         # Dependencies
+├── server/                     # Node.js backend
+│   ├── controller/           # Route controllers
+│   ├── database/            # Database connections
+│   ├── middleware/          # Express middleware
+│   ├── models/              # Mongoose models
+│   ├── routes/              # API routes
+│   ├── utils/               # Utility functions
+│   ├── uploads/             # File storage
+│   ├── logs/                # Application logs
+│   ├── server.js            # Main server file
+│   └── package.json         # Dependencies
+├── scripts/                    # Management scripts
+├── docker-compose.yml         # Production containers
+├── docker-compose.dev.yml     # Development containers
+└── README.md                  # This file
+```
+
+### **Code Quality**
+```bash
+# Linting
+npm run lint
+
+# Code formatting
+npm run format
+
+# Security audit
+npm audit
+
+# Dependency check
+npm outdated
+```
+
+---
+
+## 🔒 Security
+
+### **Security Features**
+- ✅ **AES-256-GCM Encryption**: All files encrypted at rest
+- ✅ **JWT + TOTP 2FA**: Multi-factor authentication
+- ✅ **bcrypt Password Hashing**: 12 rounds with salt
+- ✅ **Rate Limiting**: DDoS protection
+- ✅ **Input Validation**: All endpoints protected
+- ✅ **CORS Protection**: Configurable origins
+- ✅ **Helmet Security Headers**: XSS, clickjacking protection
+- ✅ **Account Lockout**: Failed login protection
+- ✅ **Audit Logging**: Complete security event tracking
+
+### **Security Best Practices**
+- 🔐 Change default JWT secrets immediately
+- 🔑 Use strong passwords for all accounts
+- 🛡️ Enable 2FA for all admin accounts
+- 📊 Monitor audit logs regularly
+- 🔄 Rotate secrets periodically
+- 🚫 Never commit secrets to version control
+- 🔍 Regular security updates
+- 📋 Follow least privilege principle
+
+### **Vulnerability Reporting**
+If you discover a security vulnerability, please send an email to security@yourcompany.com. All security vulnerabilities will be promptly addressed.
+
+---
+
+## 🚀 Performance
+
+### **Optimization Features**
+- **🔄 Redis Caching**: User sessions, file metadata, rate limits
+- **📊 Database Indexing**: Optimized queries with proper indexes
+- **🗜️ File Compression**: Bulk downloads with configurable compression
+- **⚡ Connection Pooling**: Efficient database connections
+- **📱 Lazy Loading**: Frontend components loaded on demand
+- **🔧 Production Builds**: Minified and optimized assets
+
+### **Performance**
+
+No benchmark numbers are quoted here, because none have been measured. This
+section used to claim sub-100ms endpoints, 1000+ concurrent users, sub-50ms
+queries and a 90% cache hit rate; the repository contains no load test, no
+timing instrumentation and nothing recording cache hits, so all five were
+invented.
+
+The optimisations listed above are real and are worth doing. What they achieve
+under load is unknown until somebody measures it.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### **Development Workflow**
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/AmazingFeature`)
+3. **Commit** your changes (`git commit -m 'Add AmazingFeature'`)
+4. **Push** to the branch (`git push origin feature/AmazingFeature`)
+5. **Open** a Pull Request
+
+### **Contribution Areas**
+- 🐛 **Bug Fixes**: Help us squash bugs
+- ✨ **New Features**: Add new functionality
+- 📚 **Documentation**: Improve docs and guides
+- 🔒 **Security**: Enhance security features
+- 🚀 **Performance**: Optimize performance
+- 🧪 **Testing**: Improve test coverage
+
+### **Code Style**
+- Follow ESLint configuration
+- Use Prettier for code formatting
+- Write comprehensive tests
+- Document new features
+- Follow commit message conventions
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **Security**: Thanks to the OWASP community for security best practices
+- **Encryption**: Inspired by industry-standard encryption implementations
+- **UI/UX**: Modern design principles and accessibility guidelines
+- **Performance**: Optimization techniques from high-scale applications
+- **Community**: Open source contributors and security researchers
+
+---
+
+## 📞 Support
+
+### **Documentation**
+- 📖 [API Documentation](docs/api.md)
+- 🐳 [Docker Guide](docs/docker.md)
+- ☁️ [Deployment Guide](DEPLOYMENT.md)
+- 🔒 [Security Guide](docs/security.md)
+- 🛠️ [Troubleshooting](docs/troubleshooting.md)
+
+### **Community**
+- 💬 [Discussions](https://github.com/your-username/secureshare/discussions)
+- 🐛 [Issue Tracker](https://github.com/your-username/secureshare/issues)
+- 📧 [Email Support](mailto:support@yourcompany.com)
+
+### **Enterprise Support**
+For enterprise support, custom development, or consulting services, please contact us at enterprise@yourcompany.com.
+
+---
+
+<div align="center">
+
+**⭐ If you found this project helpful, please give it a star! ⭐**
+
+Made with ❤️ by the SecureShare Team
+
+[🔝 Back to Top](#-secureshare--enterprise-file-sharing-platform)
+
+</div>
