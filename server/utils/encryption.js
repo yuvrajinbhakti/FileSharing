@@ -3,6 +3,21 @@ import fs from 'fs';
 import path from 'path';
 
 const algorithm = 'aes-256-gcm';
+
+/*
+ * A note on the constructor, because the wrong one is easy to write and its
+ * failure is invisible.
+ *
+ * There is no `crypto.createCipherGCM`. Node's API is `createCipheriv`, and the
+ * GCM part comes from the algorithm string above. Calling the name that does not
+ * exist throws `crypto.createCipherGCM is not a function` on every single
+ * encryption — and the upload controller catches that and falls back to storing
+ * the file unencrypted, so nothing surfaced. Files went to disk in plaintext
+ * while the dashboard told people they were encrypted with AES-256.
+ *
+ * Everything else here was already right: a fresh IV per file, getAuthTag on the
+ * way out, setAuthTag on the way back in. Only the name was wrong.
+ */
 const keyLength = 32; // 256 bits
 const ivLength = 16; // 128 bits
 const tagLength = 16; // 128 bits
@@ -65,7 +80,7 @@ export const encryptFile = async (inputPath, outputPath, key) => {
             const iv = generateIV();
             let cipher;
             try {
-                cipher = crypto.createCipherGCM(algorithm, key, iv);
+                cipher = crypto.createCipheriv(algorithm, key, iv);
             } catch (error) {
                 throw new Error(`Failed to create cipher: ${error.message}`);
             }
@@ -217,7 +232,7 @@ export const decryptFile = async (inputPath, outputPath, key) => {
                 // Extract encrypted content
                 const encryptedData = data.slice(ivLength, -tagLength);
                 
-                const decipher = crypto.createDecipherGCM(algorithm, key, iv);
+                const decipher = crypto.createDecipheriv(algorithm, key, iv);
                 decipher.setAuthTag(tag);
                 
                 const decrypted = Buffer.concat([
@@ -240,7 +255,7 @@ export const decryptFile = async (inputPath, outputPath, key) => {
 // Encrypt text data
 export const encryptText = (text, key) => {
     const iv = generateIV();
-    const cipher = crypto.createCipherGCM(algorithm, key, iv);
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
     
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -256,7 +271,7 @@ export const encryptText = (text, key) => {
 
 // Decrypt text data
 export const decryptText = (encryptedData, key, iv, tag) => {
-    const decipher = crypto.createDecipherGCM(algorithm, key, Buffer.from(iv, 'hex'));
+    const decipher = crypto.createDecipheriv(algorithm, key, Buffer.from(iv, 'hex'));
     decipher.setAuthTag(Buffer.from(tag, 'hex'));
     
     let decrypted = decipher.update(encryptedData, 'hex', 'utf8');

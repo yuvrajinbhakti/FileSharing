@@ -186,39 +186,33 @@ export const uploadFile = async (request, response) => {
                 encryptedPath: encryptionResult.encryptedPath 
             });
         } catch (encryptError) {
-            logError('File encryption failed, attempting fallback to unencrypted storage', encryptError, { userId });
-            
-            // Fallback: Store file without encryption
+            // Refuse the upload rather than storing the file in the clear.
+            //
+            // This used to fall back to unencrypted storage, building what the code
+            // itself called a "fake encryption result" so the rest of the pipeline
+            // would accept it. Combined with a call to a Node function that does not
+            // exist — createCipherGCM — that fallback ran on every single upload, so
+            // every file on disk was plaintext while the dashboard told people
+            // "your files will be encrypted with AES-256 before storage".
+            //
+            // A tool whose whole premise is secure sharing must not silently
+            // downgrade the one guarantee it makes. Failing loudly costs an upload;
+            // succeeding quietly costs the guarantee, and the user cannot tell.
+            logError('File encryption failed; refusing to store the file unencrypted', encryptError, { userId });
+
             try {
-                // Move file to encrypted directory without encryption
-                const fallbackPath = path.join('uploads', 'encrypted', `unencrypted_${Date.now()}_${originalFile.filename}`);
-                fs.renameSync(originalFile.path, fallbackPath);
-                
-                // Create fake encryption result for compatibility
-                encryptionResult = {
-                    encryptedPath: fallbackPath,
-                    iv: 'unencrypted',
-                    tag: 'unencrypted'
-                };
-                
-                isEncrypted = false;
-                finalPath = fallbackPath;
-                
-                logInfo('File stored without encryption (fallback)', { 
-                    userId, 
-                    fallbackPath: fallbackPath 
-                });
-            } catch (fallbackError) {
-                logError('Fallback storage also failed', fallbackError, { userId });
-                return response.status(500).json({
-                    error: 'File storage failed - both encryption and fallback failed',
-                    code: 'STORAGE_ERROR',
-                    details: {
-                        encryptionError: encryptError.message,
-                        fallbackError: fallbackError.message
-                    }
-                });
+                if (originalFile?.path && fs.existsSync(originalFile.path)) {
+                    fs.unlinkSync(originalFile.path);
+                }
+            } catch (cleanupError) {
+                logError('Could not remove the unencrypted upload', cleanupError, { userId });
             }
+
+            return response.status(500).json({
+                error: 'File could not be encrypted and was not stored',
+                code: 'ENCRYPTION_FAILED',
+                details: { encryptionError: encryptError.message }
+            });
         }
         
         // Create file record in database
