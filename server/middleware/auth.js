@@ -2,11 +2,11 @@ import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
 import { auditLog } from '../utils/logger.js';
 import dotenv from 'dotenv';
+import { JWT_SECRET, JWT_REFRESH_SECRET } from '../utils/secrets.js';
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key-change-this-in-production';
+
 
 // Generate access token (15 minutes)
 export const generateAccessToken = (user) => {

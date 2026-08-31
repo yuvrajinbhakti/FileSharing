@@ -4,10 +4,11 @@ import { auditLog, logError } from '../utils/logger.js';
 import { body, validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { JWT_REFRESH_SECRET } from '../utils/secrets.js';
 
 dotenv.config();
 
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key-change-this-in-production';
+
 
 // Validation rules
 export const registerValidation = [

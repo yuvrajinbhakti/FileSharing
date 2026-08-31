@@ -105,20 +105,29 @@ FileSchema.virtual('downloadUrl').get(function() {
 
 // Method to check if user can access file
 FileSchema.methods.canAccess = function(userId, userRole) {
+    // The download route uses optionalAuth, so userId is undefined for anyone
+    // not signed in. This used to call userId.toString() before reaching the
+    // public check, which threw — meaning a public file could not be fetched by
+    // the very people "public" is for. It failed closed, so nothing was exposed;
+    // the feature simply did not work and nothing said so.
+    const signedIn = userId !== undefined && userId !== null;
+    const id = signedIn ? userId.toString() : null;
+
     // Admin can access any file
     if (userRole === 'admin') return true;
-    
+
     // Owner can always access
-    if (this.uploadedBy.toString() === userId.toString()) return true;
-    
-    // Public files can be accessed by anyone
+    if (signedIn && this.uploadedBy.toString() === id) return true;
+
+    // Public files can be accessed by anyone, signed in or not
     if (this.accessLevel === 'public') return true;
-    
-    // Restricted files - check allowed users
+
+    // Restricted files — only the users named on the file, and you have to be
+    // somebody for your name to be on it
     if (this.accessLevel === 'restricted') {
-        return this.allowedUsers.some(allowedId => allowedId.toString() === userId.toString());
+        return signedIn && this.allowedUsers.some(allowedId => allowedId.toString() === id);
     }
-    
+
     // Private files - only owner
     return false;
 };
