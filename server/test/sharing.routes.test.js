@@ -117,7 +117,37 @@ before(async () => {
     redisProcess = startRedis(REDIS_PORT);
     await waitForPort(REDIS_PORT);
 
-    const noop = () => {};
+    // The logger, mocked with the *real* signature rather than a permissive noop.
+    //
+    // The first version of this was `logInfo: noop, logError: noop`, which
+    // accepts any arguments at all. The real `logError(message, error)` read
+    // `error.message`, so every one-argument call site threw — and because those
+    // sat on refusal paths inside try/catch, the throw was swallowed and turned
+    // into a generic failure. The suite passed. Production returned a dead end
+    // for a mistyped password.
+    //
+    // So this double asserts the contract instead of ignoring it: a test double
+    // that is more forgiving than the thing it replaces does not test that thing,
+    // it tests the double.
+    const strictLogError = (message, error, meta) => {
+        if (typeof message !== 'string') {
+            throw new TypeError(`logError expects a string message, got ${typeof message}`);
+        }
+        if (error !== undefined && error !== null && typeof error !== 'object') {
+            throw new TypeError(`logError expects an Error or object, got ${typeof error}`);
+        }
+        if (meta !== undefined && typeof meta !== 'object') {
+            throw new TypeError(`logError meta must be an object, got ${typeof meta}`);
+        }
+    };
+    const strictLogInfo = (message, meta) => {
+        if (typeof message !== 'string') {
+            throw new TypeError(`logInfo expects a string message, got ${typeof message}`);
+        }
+        if (meta !== undefined && typeof meta !== 'object') {
+            throw new TypeError(`logInfo meta must be an object, got ${typeof meta}`);
+        }
+    };
     mock.module('../models/file.js', {
         defaultExport: { findById: async (id) => FILES[String(id)] || null }
     });
@@ -125,7 +155,11 @@ before(async () => {
         defaultExport: { findById: async (id) => USERS[String(id)] || null }
     });
     mock.module('../utils/logger.js', {
-        namedExports: { logInfo: noop, logError: noop, auditLog: new Proxy({}, { get: () => noop }) }
+        namedExports: {
+            logInfo: strictLogInfo,
+            logError: strictLogError,
+            auditLog: new Proxy({}, { get: () => () => {} })
+        }
     });
     mock.module('../utils/email.js', {
         namedExports: { emailService: { sendFileShareNotification: async () => true } }

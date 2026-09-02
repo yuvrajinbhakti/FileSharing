@@ -357,8 +357,36 @@ export const logInfo = (message, meta = {}) => {
     logger.info(message, meta);
 };
 
+/**
+ * Log an error. The `error` argument is optional.
+ *
+ * This used to read `error.message` unconditionally, so every call site that
+ * passed only a message — and there were eleven — threw a TypeError from inside
+ * the logger. Most sat in `catch` blocks or on refusal paths, where the throw was
+ * caught again by an outer handler and turned into a generic failure. The result
+ * was a logger that destroyed the very information it was called to record:
+ *
+ *   validateShareLink refused a wrong password, called logError to say so, threw,
+ *   and the catch turned "Invalid password" into "Validation error". The
+ *   recipient got a dead end instead of a second try, and no line was logged
+ *   about either.
+ *
+ * A logging helper must never be able to break the code that calls it. That is
+ * the whole contract: it is the thing you reach for when something has already
+ * gone wrong.
+ *
+ * Note that `error` may also be a plain object — several call sites pass one —
+ * so this reads defensively rather than assuming an Error instance.
+ */
 export const logError = (message, error, meta = {}) => {
-    logger.error(message, { error: error.message, stack: error.stack, ...meta });
+    const details = error instanceof Error
+        ? { error: error.message, stack: error.stack }
+        : error && typeof error === 'object'
+            ? { error: error.message ?? undefined, ...error }
+            : error !== undefined
+                ? { error: String(error) }
+                : {};
+    logger.error(message, { ...details, ...meta });
 };
 
 export const logWarn = (message, meta = {}) => {
