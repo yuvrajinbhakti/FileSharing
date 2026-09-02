@@ -168,9 +168,26 @@ export const createShareLink = async (request, response) => {
         if (message.includes('Expiry') || message.includes('maxDownloads')) {
             return response.status(400).json({ error: message, code: 'INVALID_SHARE_OPTIONS' });
         }
+        // A misconfigured deployment is not a bug in the request, and answering
+        // it with an opaque 500 makes the operator guess. The first thing this
+        // endpoint did in production was fail this way, and the generic message
+        // said nothing about which of a dozen things was wrong — which is the
+        // same silent-failure shape the rest of this work has been about.
+        if (message.includes('FRONTEND_URL')) {
+            logError('Share link creation blocked by configuration', error);
+            return response.status(503).json({
+                error: 'Sharing is not configured on this server: FRONTEND_URL is not set',
+                code: 'SHARING_NOT_CONFIGURED'
+            });
+        }
 
         logError('Share link creation failed', error, { fileId: request.params.fileId, userId: request.user?.id });
-        return response.status(500).json({ error: 'Could not create share link', code: 'SHARE_CREATE_ERROR' });
+        return response.status(500).json({
+            error: 'Could not create share link',
+            code: 'SHARE_CREATE_ERROR',
+            // The reason, in the environments where showing it is not a leak.
+            detail: process.env.NODE_ENV === 'production' ? undefined : message
+        });
     }
 };
 
