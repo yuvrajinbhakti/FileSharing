@@ -19,21 +19,24 @@ const ShareModal = ({ file, isOpen, onClose }) => {
         setError('');
         
         try {
-            const expiresAt = new Date(Date.now() + parseInt(shareOptions.expiresIn) * 60 * 60 * 1000);
             const allowedEmails = shareOptions.allowedEmails
                 .split(',')
                 .map(email => email.trim())
                 .filter(email => email);
 
-            const response = await fileAPI.createShareLink(file.id, {
-                expiresAt,
-                maxDownloads: parseInt(shareOptions.maxDownloads),
+            // The server takes a duration, not an instant, and validates it
+            // against a 30-day ceiling. Sending `expiresAt` — as this did — left
+            // it undefined server-side and silently fell back to the default.
+            const share = await fileAPI.createShareLink(file.id, {
+                expiresInHours: parseInt(shareOptions.expiresIn, 10),
+                maxDownloads: parseInt(shareOptions.maxDownloads, 10),
                 password: shareOptions.password || null,
                 allowedEmails,
-                description: shareOptions.description
+                description: shareOptions.description,
+                notify: allowedEmails.length > 0
             });
 
-            setShareUrl(response.shareUrl);
+            setShareUrl(share.shareUrl);
         } catch (error) {
             setError(error.response?.data?.error || 'Failed to create share link');
         } finally {

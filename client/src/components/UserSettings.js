@@ -9,7 +9,9 @@ const UserSettings = ({ onClose }) => {
     const [activeTab, setActiveTab] = useState('security');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    // `success` is rendered but nothing ever sets it. Kept as a constant so the
+    // markup that reads it still works, without an unused setter that CI rejects.
+    const [success] = useState('');
     const [show2FA, setShow2FA] = useState(false);
     const [userActivity, setUserActivity] = useState([]);
 
@@ -40,8 +42,9 @@ const UserSettings = ({ onClose }) => {
     const handleRefreshUser = async () => {
         // Refresh user data after 2FA changes
         try {
-            const response = await authAPI.getProfile();
-            // This would ideally update the auth context
+            // Refetched purely for the side effect of confirming the change
+            // landed; there is no auth-context setter to hand it to yet.
+            await authAPI.getProfile();
         } catch (error) {
             console.error('Failed to refresh user data:', error);
         }

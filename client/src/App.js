@@ -5,6 +5,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import ShareModal from './components/ShareModal';
+import SharedFile from './components/SharedFile';
 import BulkOperations from './components/BulkOperations';
 import UserSettings from './components/UserSettings';
 import AdminPanel from './components/AdminPanel';
@@ -416,6 +417,18 @@ function App() {
                         {/* Public routes */}
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
+
+                        {/*
+                          * Share links. Public by design — the recipient has no
+                          * account, so this must not sit behind ProtectedRoute.
+                          *
+                          * It also has to be declared before the catch-all below,
+                          * which was previously the only thing matching this path
+                          * and sent every share link to /dashboard, and from there
+                          * to /login. The server minted working URLs the whole
+                          * time; there was nowhere for them to land.
+                          */}
+                        <Route path="/share/:linkId/:accessToken" element={<SharedFile />} />
                         
                         {/* Protected routes */}
                         <Route path="/dashboard" element={

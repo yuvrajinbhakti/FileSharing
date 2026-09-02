@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { authAPI, adminAPI } from '../service/api';
+import { adminAPI } from '../service/api';
 import './AdminPanel.css';
 
 const AdminPanel = ({ onClose }) => {

@@ -223,25 +223,33 @@ export const fileAPI = {
         return response.data;
     },
     
-    // File sharing
+    // File sharing.
+    //
+    // These used to point at `/sharing/create` and `/sharing/:linkId/:token`,
+    // which the server has never had — the paths are `/share/...`. Nothing here
+    // could ever have succeeded, and the share button failed the same way every
+    // time it was pressed.
     createShareLink: async (fileId, options) => {
-        const response = await api.post('/sharing/create', { fileId, ...options });
+        const response = await api.post(`/share/${fileId}`, options);
+        // The server wraps it: { message, share: {...}, notifications }.
+        return response.data.share;
+    },
+
+    listMyShareLinks: async () => {
+        const response = await api.get('/share/my-links');
         return response.data;
     },
-    
-    getShareLink: async (linkId, accessToken) => {
-        const response = await api.get(`/sharing/${linkId}/${accessToken}`);
+
+    getShareStats: async (linkId) => {
+        const response = await api.get(`/share/${linkId}/stats`);
+        return response.data.stats;
+    },
+
+    revokeShareLink: async (linkId) => {
+        const response = await api.delete(`/share/${linkId}`);
         return response.data;
     },
-    
-    downloadSharedFile: async (linkId, accessToken, password = null) => {
-        const response = await api.post(`/sharing/${linkId}/${accessToken}/download`, 
-            { password }, 
-            { responseType: 'blob' }
-        );
-        return response;
-    },
-    
+
     // Bulk operations
     createBulkDownload: async (fileIds, options = {}) => {
         const response = await api.post('/bulk/download', { fileIds, ...options });
@@ -284,6 +292,96 @@ export const adminAPI = {
     getSystemActivity: async (limit = 50) => {
         const response = await api.get(`/admin/activity?limit=${limit}`);
         return response.data;
+    }
+};
+
+/**
+ * The recipient side of a share link.
+ *
+ * Deliberately its own axios instance, with none of the interceptors above.
+ * The shared `api` client attaches whatever token is in localStorage and, on any
+ * 401, clears the tokens and sends the browser to `/login`. Both behaviours are
+ * wrong here:
+ *
+ *   - A share link is opened by somebody with no account. There is nothing to
+ *     attach, and attaching a stale token from a previous session would make a
+ *     public request look like an authenticated one.
+ *
+ *   - The server answers 401 to say "this link wants a password" or "it wants an
+ *     email". Through the shared client that becomes a redirect to the login
+ *     page — so asking for a password would instead throw the recipient out to
+ *     a form for an account they do not have, and the link would look broken to
+ *     the one person it was created for.
+ *
+ * Errors are returned rather than thrown, because for this page a refusal is a
+ * normal outcome to render, not an exception to catch.
+ */
+const publicApi = axios.create({
+    baseURL: API_BASE_URL,
+    timeout: 30000,
+    headers: { 'Content-Type': 'application/json' }
+});
+
+export const shareAPI = {
+    /**
+     * What is behind this link. Does not spend a download.
+     * @returns {{ ok: true, file: object } | { ok: false, status: number, code: string, error: string, passwordRequired?: boolean, emailRequired?: boolean }}
+     */
+    getInfo: async (linkId, accessToken, { password, email } = {}) => {
+        try {
+            const params = {};
+            if (password) params.password = password;
+            if (email) params.email = email;
+            const response = await publicApi.get(
+                `/share/${encodeURIComponent(linkId)}/${encodeURIComponent(accessToken)}`,
+                { params }
+            );
+            return { ok: true, ...response.data };
+        } catch (error) {
+            const data = error.response?.data || {};
+            return {
+                ok: false,
+                status: error.response?.status ?? 0,
+                code: data.code || 'NETWORK_ERROR',
+                error: data.error || 'Could not reach the server',
+                passwordRequired: Boolean(data.passwordRequired),
+                emailRequired: Boolean(data.emailRequired)
+            };
+        }
+    },
+
+    /**
+     * The file itself. Returns a Blob on success.
+     *
+     * `responseType: 'blob'` means an error body arrives as a Blob too, so it
+     * has to be read back as text before it can be understood — otherwise every
+     * refusal renders as "[object Blob]".
+     */
+    download: async (linkId, accessToken, { password, email } = {}) => {
+        try {
+            const response = await publicApi.post(
+                `/share/${encodeURIComponent(linkId)}/${encodeURIComponent(accessToken)}/download`,
+                { password: password || null, email: email || null },
+                { responseType: 'blob' }
+            );
+            return { ok: true, blob: response.data };
+        } catch (error) {
+            let data = {};
+            const body = error.response?.data;
+            if (body instanceof Blob) {
+                try { data = JSON.parse(await body.text()); } catch { /* not json */ }
+            } else if (body) {
+                data = body;
+            }
+            return {
+                ok: false,
+                status: error.response?.status ?? 0,
+                code: data.code || 'NETWORK_ERROR',
+                error: data.error || 'Could not reach the server',
+                passwordRequired: Boolean(data.passwordRequired),
+                emailRequired: Boolean(data.emailRequired)
+            };
+        }
     }
 };
 
