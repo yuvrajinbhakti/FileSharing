@@ -9,7 +9,7 @@
     "dev": "nodemon server.js",
     "setup": "node scripts/createAdmin.js",
     "init": "npm run setup && npm run dev",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "node --test --experimental-test-module-mocks \"test/*.test.js\""
   },
   "keywords": [],
   "author": "",

@@ -18,12 +18,20 @@ import {
     registerValidation,
     loginValidation 
 } from '../controller/auth-controller.js';
-import { 
-    authenticateToken, 
-    authorizeRoles, 
-    verifyFileOwnership, 
+import {
+    createShareLink,
+    getSharedFileInfo,
+    downloadSharedFile,
+    listMyShareLinks,
+    getShareStats,
+    revokeShare
+} from '../controller/sharing-controller.js';
+import {
+    authenticateToken,
+    authorizeRoles,
+    verifyFileOwnership,
     optionalAuth,
-    rateLimitPerUser 
+    rateLimitPerUser
 } from '../middleware/auth.js';
 import fs from 'fs';
 
@@ -156,6 +164,40 @@ router.delete('/file/:fileId', authenticateToken, verifyFileOwnership, deleteFil
 
 // File download routes (optional authentication for public files)
 router.get('/file/:fileId', optionalAuth, downloadFile);
+
+/**
+ * Share links.
+ *
+ * The public pair carries no `authenticateToken`, which is the entire point: the
+ * recipient of a link has no account here. That makes these the only routes in
+ * the app reachable by a stranger, so they get their own rate limit — the
+ * per-user limiter used elsewhere keys on a user id these requests do not have,
+ * and without a cap a link id is guessable at whatever rate the network allows.
+ *
+ * Ordering matters below. `/share/my-links` is declared before `/share/:linkId/stats`
+ * only by virtue of being a different shape, but `/share/:fileId` (POST) and
+ * `/share/:linkId` (DELETE) coexist safely because they differ by method.
+ */
+const shareAccessLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    message: {
+        error: 'Too many attempts. Try again later.',
+        code: 'SHARE_RATE_LIMIT_EXCEEDED'
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+// Owner-side: create, list, inspect, revoke.
+router.post('/share/:fileId', authenticateToken, createShareLink);
+router.get('/share/my-links', authenticateToken, listMyShareLinks);
+router.get('/share/:linkId/stats', authenticateToken, getShareStats);
+router.delete('/share/:linkId', authenticateToken, revokeShare);
+
+// Recipient-side: no account required, both guarded by the access limiter.
+router.get('/share/:linkId/:accessToken', shareAccessLimiter, getSharedFileInfo);
+router.post('/share/:linkId/:accessToken/download', shareAccessLimiter, downloadSharedFile);
 
 // Admin routes
 router.get('/admin/files', authenticateToken, authorizeRoles('admin'), async (req, res) => {
