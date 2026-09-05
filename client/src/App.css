@@ -1,70 +1,74 @@
-* {
+/**
+ * App-wide baseline.
+ *
+ * This file used to carry the scaffolding from a much earlier version of the
+ * app — a `.container` with a background image, a `.wrapper`, and bare element
+ * rules:
+ *
+ *   input  { margin: 20px 0; width: 300px; padding: 8px; }
+ *   button { width: 150px; height: 40px; margin: 30px 0; background: #445a6f; }
+ *   a      { margin-top: 10px; }
+ *   h1     { font-size: 40px; margin: 40px 0; }
+ *
+ * None of that markup exists any more — nothing renders `.container`,
+ * `.wrapper` or `.img`. The element rules, however, applied to every input,
+ * button and link in the application, and a bare element selector loses to any
+ * class only on specificity, so every component had to out-declare it property
+ * by property or silently inherit it.
+ *
+ * They did inherit it. `button { width: 150px }` is why the sign-in button sat
+ * at a third of the form's width beneath full-width inputs. `input { margin:
+ * 20px 0 }` put forty stray pixels around every field, which is most of why the
+ * login card grew past the bottom of a laptop screen. `a { margin-top: 10px }`
+ * nudged every inline link out of alignment with its own sentence.
+ *
+ * What is left is the reset and the page defaults. Sizing belongs to the
+ * components.
+ */
+
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-.container {
-  /* background-image: url('https://i.pinimg.com/originals/16/46/24/1646243661201a0892cc4b1a64fcbacf.jpg'); */
-  background-image: url("../public/download2.png");
-  background-size: cover;
-  background-position: center;
-  height: 100vh;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.wrapper {
-  width: 600px;
-  max-width: 80%; /* Adjust width as needed */
-  height: 400px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-}
-
-.img {
-  display: none; /* Hide the image element as it's no longer needed */
-}
-
-h1 {
-  font-size: 40px;
-  font-weight: 600;
-  color: #445a6f;
-  margin: 40px 0;
-}
-
-input {
-  margin: 20px 0;
-  width: 300px;
-  padding: 8px;
-}
-
-input:focus-visible {
-  outline: none;
+/* Form controls do not inherit typography by default, and every one of them in
+   this app wants the page font rather than the browser's. */
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
 }
 
 button {
-  width: 150px;
-  height: 40px;
-  border-radius: 5px;
-  background-color: #445a6f;
-  border: 1px solid #445a6f;
-  color: #fff;
-  font-size: 20px;
-  margin: 30px 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }
 
 a {
-  color: #445a6f;
+  color: inherit;
   text-decoration: none;
-  margin-top: 10px;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+/* A visible focus ring everywhere, for anything that has not defined its own.
+   The old file removed the outline from inputs outright, which leaves keyboard
+   users with no way to tell where they are. */
+:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
 }
