@@ -1,6 +1,43 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+/**
+ * Where the API lives.
+ *
+ * `REACT_APP_API_URL` is read at *build* time, not run time — Create React App
+ * substitutes the literal into the bundle — so an unset variable is baked in
+ * permanently and every visitor's browser is told to call `localhost:8000`,
+ * which for them means their own machine. Nothing errors on the build; the
+ * deploy succeeds; the site is simply broken for everybody who is not the
+ * person who built it.
+ *
+ * This is not hypothetical. The variable used to be supplied through a Vercel
+ * Secret reference in vercel.json, that secret stopped existing, and every
+ * deployment since failed at config validation — so the live site sat on a
+ * build from over a year earlier while the failures were invisible in Vercel's
+ * own deployment list.
+ *
+ * The API is on a different host from the frontend, so unlike the editor's
+ * socket origin there is nothing sensible to derive from `window.location`.
+ * What can be done is refuse to be quiet about it: if the page is being served
+ * from somewhere other than a developer's own machine and no API URL was
+ * supplied, say so loudly in the console rather than letting every request fail
+ * with an opaque network error.
+ */
+const CONFIGURED_API_URL = process.env.REACT_APP_API_URL;
+const API_BASE_URL = CONFIGURED_API_URL || 'http://localhost:8000/api';
+
+if (!CONFIGURED_API_URL && typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+    if (!isLocal) {
+        console.error(
+            `[SecureShare] REACT_APP_API_URL was not set when this bundle was built, so it ` +
+            `points at ${API_BASE_URL} — your own machine, not the server. Every API call ` +
+            `from this page will fail. Set REACT_APP_API_URL in the hosting provider's ` +
+            `environment variables and redeploy.`
+        );
+    }
+}
 
 // Create axios instance with default config
 const api = axios.create({
