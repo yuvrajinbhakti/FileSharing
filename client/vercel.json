@@ -1,16 +1,25 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
 
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "//": [
+    "Single-page app fallback: anything that is not a real file is served",
+    "index.html so the client router can handle it. Without this, opening a",
+    "share link directly — /share/<id>/<token> — returns Vercel's own 404,",
+    "because that path exists only in React Router and not on disk.",
+    "",
+    "Rewrites are applied after the filesystem is checked, so real assets still",
+    "win: favicon.ico, manifest.json and everything under /static are served as",
+    "themselves rather than swallowed by the catch-all.",
+    "",
+    "There is deliberately no `headers` block for /static. An earlier version",
+    "set immutable cache-control there and every asset under that prefix started",
+    "returning 404 while the rest of the site was fine — the rule matched the",
+    "path and the request stopped there instead of falling through. CRA already",
+    "emits content-hashed filenames and Vercel already caches them, so the rule",
+    "was buying nothing and cost the whole bundle."
   ],
 
-  "headers": [
-    {
-      "source": "/static/(.*)",
-      "headers": [
-        { "key": "cache-control", "value": "public, max-age=31536000, immutable" }
-      ]
-    }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
