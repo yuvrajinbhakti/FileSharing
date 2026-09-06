@@ -31,16 +31,22 @@ const BulkOperations = ({ selectedFiles, onComplete, onCancel }) => {
             };
 
             const response = await fileAPI.createBulkDownload(fileIds, options);
-            
-            // Trigger download
+
+            // The archive lives behind an authenticated route, so it cannot be
+            // fetched by pointing an anchor at it — a plain link click carries
+            // no Authorization header and comes back 401. Pull the bytes with
+            // the configured client, then hand the browser a blob URL.
+            const blob = await fileAPI.downloadBulkArchive(response.downloadId);
+            const objectUrl = window.URL.createObjectURL(blob);
             const downloadLink = document.createElement('a');
-            downloadLink.href = response.downloadUrl;
+            downloadLink.href = objectUrl;
             downloadLink.download = response.fileName;
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
+            window.URL.revokeObjectURL(objectUrl);
 
-            setSuccess(`Bulk download created successfully: ${response.fileName}`);
+            setSuccess(`Downloaded ${response.fileCount} files as ${response.fileName}`);
             onComplete?.();
         } catch (error) {
             setError(error.response?.data?.error || 'Failed to create bulk download');

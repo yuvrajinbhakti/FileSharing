@@ -289,13 +289,27 @@ export const fileAPI = {
 
     // Bulk operations
     createBulkDownload: async (fileIds, options = {}) => {
+        // The server answers { success, message, data: {...} }. The component
+        // reads `response.downloadUrl` and `response.fileName` directly, so the
+        // envelope is unwrapped here rather than making every caller reach
+        // through it — otherwise the download anchor gets href="undefined".
         const response = await api.post('/bulk/download', { fileIds, ...options });
+        return response.data.data;
+    },
+
+    downloadBulkArchive: async (downloadId) => {
+        const response = await api.get(`/bulk/download/${downloadId}`, { responseType: 'blob' });
         return response.data;
     },
-    
+
     bulkDeleteFiles: async (fileIds) => {
         const response = await api.post('/bulk/delete', { fileIds });
-        return response.data;
+        return response.data.data;
+    },
+
+    getFileStatistics: async () => {
+        const response = await api.get('/bulk/statistics');
+        return response.data.data;
     }
 };
 

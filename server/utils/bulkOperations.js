@@ -1,4 +1,5 @@
 import archiver from 'archiver';
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { logInfo, logError, auditLog } from './logger.js';
@@ -76,7 +77,11 @@ export const createBulkDownload = async (fileIds, userId, options = {}) => {
         await archive.finalize();
 
         // Store download info in Redis for tracking
-        const downloadId = require('crypto').randomBytes(16).toString('hex');
+        // `require` does not exist here — package.json declares "type": "module",
+        // so this line threw ReferenceError every time, after the archive had
+        // already been built and written. The feature was unreachable anyway,
+        // so nothing ever ran it.
+        const downloadId = crypto.randomBytes(16).toString('hex');
         await redisUtils.setTempData(downloadId, {
             zipPath,
             userId,
@@ -124,7 +129,7 @@ export const processBulkUpload = async (files, userId, options = {}) => {
                 const result = {
                     originalName: file.originalname,
                     success: true,
-                    fileId: require('crypto').randomBytes(12).toString('hex'),
+                    fileId: crypto.randomBytes(12).toString('hex'),
                     size: file.size,
                     mimeType: file.mimetype
                 };

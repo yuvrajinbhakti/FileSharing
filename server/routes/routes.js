@@ -19,6 +19,13 @@ import {
     loginValidation 
 } from '../controller/auth-controller.js';
 import {
+    createBulkDownload,
+    downloadBulkArchive,
+    bulkDeleteFiles,
+    bulkUpdateMetadata,
+    getFileStatistics
+} from '../controller/bulk-controller.js';
+import {
     createShareLink,
     getSharedFileInfo,
     downloadSharedFile,
@@ -198,6 +205,39 @@ router.delete('/share/:linkId', authenticateToken, revokeShare);
 // Recipient-side: no account required, both guarded by the access limiter.
 router.get('/share/:linkId/:accessToken', shareAccessLimiter, getSharedFileInfo);
 router.post('/share/:linkId/:accessToken/download', shareAccessLimiter, downloadSharedFile);
+
+/**
+ * Bulk operations.
+ *
+ * controller/bulk-controller.js has been 248 lines that nothing imported, with a
+ * working UI in the client calling /bulk/download and /bulk/delete — paths that
+ * returned 404 every time somebody pressed the button.
+ *
+ * Ownership is enforced one layer down, in utils/bulkOperations.js, which only
+ * selects files you uploaded, that are public, or that you are named on. That is
+ * the right place for it: the query that decides what goes in the archive is the
+ * same query that decides what you are allowed to see.
+ *
+ * Rate-limited on its own budget rather than sharing the upload limiter — a
+ * single request here can zip an arbitrary number of files, so it costs
+ * considerably more than one upload and should not be metered as if it were.
+ */
+const bulkLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: {
+        error: 'Too many bulk operations. Try again later.',
+        code: 'BULK_RATE_LIMIT_EXCEEDED'
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+router.post('/bulk/download', authenticateToken, bulkLimiter, createBulkDownload);
+router.get('/bulk/download/:downloadId', authenticateToken, downloadBulkArchive);
+router.post('/bulk/delete', authenticateToken, bulkLimiter, bulkDeleteFiles);
+router.patch('/bulk/metadata', authenticateToken, bulkLimiter, bulkUpdateMetadata);
+router.get('/bulk/statistics', authenticateToken, getFileStatistics);
 
 // Admin routes
 router.get('/admin/files', authenticateToken, authorizeRoles('admin'), async (req, res) => {

@@ -17,8 +17,13 @@ export const createBulkDownload = async (req, res) => {
             });
         }
 
-        // Create bulk download
-        const result = await bulkOperations.createBulkDownload(userId, fileIds, {
+        // Argument order matters here and was wrong: the util's signature is
+        // `createBulkDownload(fileIds, userId, options)` and this passed
+        // `(userId, fileIds)`. Mongo would have been asked for `_id: { $in:
+        // "<a user id string>" }` and handed an array where it expected an
+        // owner, so the query that decides which files you are allowed to
+        // download was being fed both arguments backwards.
+        const result = await bulkOperations.createBulkDownload(fileIds, userId, {
             zipName,
             compressionLevel
         });
@@ -29,7 +34,17 @@ export const createBulkDownload = async (req, res) => {
         res.status(200).json({
             success: true,
             message: 'Bulk download created successfully',
-            data: result
+            data: {
+                downloadId: result.downloadId,
+                fileName: result.fileName,
+                fileCount: result.fileCount,
+                size: result.size,
+                // Where to actually fetch it. The util returns `zipPath`, an
+                // absolute path on the server's filesystem, which is no use to a
+                // browser and not something to hand out — so it is dropped here
+                // and replaced with the route that serves the archive.
+                downloadUrl: `/api/bulk/download/${result.downloadId}`
+            }
         });
     } catch (error) {
         logError('Error creating bulk download', error);

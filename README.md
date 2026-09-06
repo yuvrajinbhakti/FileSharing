@@ -59,12 +59,12 @@ fallback to plaintext any more, silent or otherwise.
 
 ### Share links
 
-66 tests, run against a real Redis rather than a stub — a stub would agree with
+Part of 79 tests, run against a real Redis rather than a stub — a stub would agree with
 whatever the code believes about `INCR` and TTL, which is the assumption under
 test.
 
 ```bash
-cd server && npm test          # needs redis-server on PATH
+cd server && npm test          # 79 tests; needs redis-server on PATH
 ```
 
 Four rules in this layer had never run, and four of them did not hold:
@@ -128,6 +128,37 @@ Link passwords are salted per link, token comparison is constant-time, and the
 download cap is claimed atomically before any bytes are served and released if
 serving then fails.
 
+### Bulk operations
+
+Select several files and download them as one archive, or delete them together.
+
+| | |
+|---|---|
+| `POST /api/bulk/download` | Prepare an archive. Returns a `downloadUrl` |
+| `GET /api/bulk/download/:downloadId` | Fetch it. Refuses ids belonging to someone else |
+| `POST /api/bulk/delete` | Delete several at once. `force` requires admin |
+| `PATCH /api/bulk/metadata` | Update several at once |
+| `GET /api/bulk/statistics` | Counts and totals for your files |
+
+Which files end up in the archive is decided by the same query that decides what
+you are allowed to see — files you uploaded, files marked public, or files you
+are named on.
+
+This was the second thing on this page written but not reachable: 248 lines of
+controller the router never imported, with a working button in the client posting
+to a 404. Connecting it surfaced three bugs that nothing could have caught while
+it was unreachable:
+
+- the controller called `createBulkDownload(userId, fileIds)` against a util
+  declared `(fileIds, userId)`, so the access query had both arguments backwards
+- `utils/bulkOperations.js` called `require('crypto')` twice inside a file the
+  package declares as `"type": "module"` — a `ReferenceError` thrown *after* the
+  archive had been built
+- the response returned `zipPath`, an absolute path on the server, and no URL a
+  browser could fetch
+
+Thirteen tests cover it, each fix confirmed to fail its test when reverted.
+
 ## Running it
 
 ```bash
@@ -171,10 +202,10 @@ whole problem was the gap between the two:
 
 - **Two-factor authentication.** The user model has the fields and methods,
   `utils/twoFactor.js` has the implementation, and no route reaches any of it.
-- **Bulk operations.** `controller/bulk-controller.js` is 248 lines that
-  `routes/routes.js` never imports. The client has a UI for it.
-- **Password reset.** `controller/enhanced-auth-controller.js` is 400 lines, also
-  never imported.
+- **Password reset.** `controller/enhanced-auth-controller.js` is 400 lines that
+  `routes/routes.js` never imports.
+
+Bulk operations used to be on this list and has since been wired up — see below.
 
 Each is complete-looking code with nothing calling it — the same shape share
 links had before they were wired up, which is worth saying plainly rather than
